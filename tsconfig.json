@@ -15,8 +15,9 @@
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,
-    "outDir": "./dist"
+    "outDir": "./dist",
+    "rootDir": "packages/mcp-server/src"
   },
-  "include": ["packages/*/src/**/*.ts"],
+  "include": ["packages/mcp-server/src/**/*.ts"],
   "exclude": ["node_modules"]
 }
