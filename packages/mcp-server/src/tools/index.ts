@@ -1,12 +1,38 @@
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import * as organizationTools from './organizations.js';
-import * as contactTools from './contacts.js';
-import * as relationshipTools from './relationships.js';
-import * as interactionTools from './interactions.js';
+import {
+  createOrganization,
+  updateOrganization,
+  searchOrganizations,
+} from "./organizations.js";
+import {
+  createContact,
+  updateContact,
+  addContactPositionHistory,
+  searchContacts,
+  createFirmColleague,
+} from "./contacts.js";
+import {
+  createRelationship,
+  updateRelationshipStrength,
+  getRelationshipMapForOrg,
+  getContactProfile,
+  linkRelationshipToOutcome,
+} from "./relationships.js";
+import { logInteraction, listRecentInteractions } from "./interactions.js";
 
-export async function registerTools(server: McpServer) {
-  await organizationTools.register(server);
-  await contactTools.register(server);
-  await relationshipTools.register(server);
-  await interactionTools.register(server);
-}
+export {
+  createOrganization,
+  updateOrganization,
+  searchOrganizations,
+  createContact,
+  updateContact,
+  addContactPositionHistory,
+  searchContacts,
+  createFirmColleague,
+  createRelationship,
+  updateRelationshipStrength,
+  getRelationshipMapForOrg,
+  getContactProfile,
+  linkRelationshipToOutcome,
+  logInteraction,
+  listRecentInteractions,
+};

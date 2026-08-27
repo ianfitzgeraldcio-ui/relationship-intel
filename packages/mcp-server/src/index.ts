@@ -1,53 +1,62 @@
-import express from 'express';
-import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
-import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/httpServerTransport.js';
-import { registerTools } from './tools/index.js';
+import { Server } from "@modelcontextprotocol/sdk/server/mcp.js";
+import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
+import { createMcpExpressApp } from "@modelcontextprotocol/sdk/server/express.js";
+import express from "express";
+import { z } from "zod";
+import {
+  createOrganization,
+  updateOrganization,
+  searchOrganizations,
+  createContact,
+  updateContact,
+  addContactPositionHistory,
+  searchContacts,
+  createFirmColleague,
+  createRelationship,
+  updateRelationshipStrength,
+  logInteraction,
+  getRelationshipMapForOrg,
+  getContactProfile,
+  listRecentInteractions,
+  linkRelationshipToOutcome,
+} from "./tools/index.js";
 
-const app = express();
-const port = parseInt(process.env.PORT || '3000', 10);
-const authToken = process.env.MCP_AUTH_TOKEN || 'change-me';
-
-app.use(express.json());
-
-// Auth middleware
-app.use('/mcp', (req, res, next) => {
-  const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'Missing or invalid Authorization header' });
-  }
-  const token = authHeader.slice(7);
-  if (token !== authToken) {
-    return res.status(403).json({ error: 'Invalid token' });
-  }
-  next();
+const server = new Server({
+  name: "relationship-intel",
+  version: "0.1.0",
 });
 
-// MCP Server
-const server = new McpServer({
-  name: 'relationship-intel',
-  version: '0.1.0',
-});
+// Register all tools
+server.tool("create_organization", createOrganization.schema, createOrganization.handler);
+server.tool("update_organization", updateOrganization.schema, updateOrganization.handler);
+server.tool("search_organizations", searchOrganizations.schema, searchOrganizations.handler);
+server.tool("create_contact", createContact.schema, createContact.handler);
+server.tool("update_contact", updateContact.schema, updateContact.handler);
+server.tool("add_contact_position_history", addContactPositionHistory.schema, addContactPositionHistory.handler);
+server.tool("search_contacts", searchContacts.schema, searchContacts.handler);
+server.tool("create_firm_colleague", createFirmColleague.schema, createFirmColleague.handler);
+server.tool("create_relationship", createRelationship.schema, createRelationship.handler);
+server.tool("update_relationship_strength", updateRelationshipStrength.schema, updateRelationshipStrength.handler);
+server.tool("log_interaction", logInteraction.schema, logInteraction.handler);
+server.tool("get_relationship_map_for_org", getRelationshipMapForOrg.schema, getRelationshipMapForOrg.handler);
+server.tool("get_contact_profile", getContactProfile.schema, getContactProfile.handler);
+server.tool("list_recent_interactions", listRecentInteractions.schema, listRecentInteractions.handler);
+server.tool("link_relationship_to_outcome", linkRelationshipToOutcome.schema, linkRelationshipToOutcome.handler);
 
-// Register tools
-registerTools(server);
+// Check if running with Express (HTTP) or stdio
+const isExpress = process.env.EXPRESS_MODE === "true" || process.argv.includes("--express");
 
-// HTTP transport for MCP
-const transport = new StreamableHTTPServerTransport('/mcp', app);
+if (isExpress) {
+  const app = express();
+  const PORT = process.env.PORT || 3000;
 
-// Health check
-app.get('/healthz', (req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
+  createMcpExpressApp(server, app);
 
-// Start server
-const httpServer = app.listen(port, () => {
-  console.log(`✓ MCP server listening on http://localhost:${port}`);
-  console.log(`✓ MCP endpoint: http://localhost:${port}/mcp`);
-  console.log(`✓ Health check: http://localhost:${port}/healthz`);
-});
-
-process.on('SIGTERM', async () => {
-  console.log('Shutting down...');
-  httpServer.close();
-  process.exit(0);
-});
+  app.listen(PORT, () => {
+    console.log(`MCP server listening on port ${PORT}`);
+  });
+} else {
+  // Stdio transport (default)
+  const transport = new StdioServerTransport();
+  server.connect(transport);
+}
