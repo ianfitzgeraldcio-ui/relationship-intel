@@ -5,6 +5,9 @@ WORKDIR /app
 # Copy all files
 COPY . .
 
+# Upgrade npm to support workspace protocol
+RUN npm install -g npm@latest
+
 # Debug: verify file structure
 RUN ls -la && echo "=== package.json ===" && cat package.json && echo "=== packages dir ===" && ls -la packages/
 
@@ -12,8 +15,7 @@ RUN ls -la && echo "=== package.json ===" && cat package.json && echo "=== packa
 RUN rm -rf node_modules package-lock.json
 
 # Generate package-lock.json and install all dependencies (including devDependencies)
-# Using --legacy-peer-deps to avoid peer dependency conflicts in Alpine
-RUN npm install --legacy-peer-deps --verbose 2>&1 | tail -50
+RUN npm install --verbose 2>&1 | tail -50
 
 # Verify typescript is installed
 RUN echo "=== Checking TypeScript installation ===" && ls -la node_modules/.bin/tsc && which tsc
