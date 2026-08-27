@@ -1,55 +1,60 @@
-// Relationship Intelligence MCP Server
-// Simplified implementation that works with MCP SDK v0.7.0
-
-import { createServer } from "node:http";
+import express from "express";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { runMigrations } from "../../db/src/index.js";
+import { createServer } from "./server.js";
+import { isAuthorized } from "./auth.js";
+import { tools } from "./tools/index.js";
 
 async function main() {
   console.log("Relationship Intelligence MCP Server v0.1.0");
-  console.log("Starting server...");
 
-  // MCP Server tools available:
-  const tools = [
-    "create_organization",
-    "update_organization",
-    "search_organizations",
-    "create_contact",
-    "update_contact",
-    "add_contact_position_history",
-    "search_contacts",
-    "create_firm_colleague",
-    "create_relationship",
-    "update_relationship_strength",
-    "log_interaction",
-    "get_relationship_map_for_org",
-    "get_contact_profile",
-    "list_recent_interactions",
-    "link_relationship_to_outcome",
-  ];
+  try {
+    await runMigrations();
+    console.log("Database schema is up to date");
+  } catch (err) {
+    console.error("Failed to run database migrations:", err);
+    process.exit(1);
+  }
 
-  console.log(`Available tools (${tools.length}): ${tools.join(", ")}`);
-  console.log("Server ready to accept MCP connections");
+  const app = express();
+  app.use(express.json());
 
-  // Railway healthcheck expects an HTTP response on /healthz
-  const port = Number(process.env.PORT) || 3000;
-  const server = createServer((req, res) => {
-    if (req.url === "/healthz") {
-      res.writeHead(200, { "Content-Type": "text/plain" });
-      res.end("ok");
+  app.get("/healthz", (_req, res) => {
+    res.status(200).send("ok");
+  });
+
+  app.post("/mcp", async (req, res) => {
+    if (!isAuthorized(req)) {
+      res.status(401).json({ error: "Unauthorized" });
       return;
     }
-    res.writeHead(404);
-    res.end();
-  });
-  await new Promise<void>((resolve, reject) => {
-    server.once("error", reject);
-    server.listen(port, () => {
-      console.log(`Healthcheck listening on port ${port}`);
-      resolve();
+
+    const server = createServer();
+    const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+    res.on("close", () => {
+      transport.close();
+      server.close();
     });
+
+    try {
+      await server.connect(transport);
+      await transport.handleRequest(req, res, req.body);
+    } catch (err) {
+      console.error("Error handling MCP request:", err);
+      if (!res.headersSent) {
+        res.status(500).json({ error: "Internal server error" });
+      }
+    }
   });
 
-  // Keep process alive
-  await new Promise(() => {});
+  const port = Number(process.env.PORT) || 3000;
+  app.listen(port, () => {
+    console.log(`MCP server listening on port ${port}`);
+    console.log(`Registered tools (${Object.keys(tools).length}): ${Object.keys(tools).join(", ")}`);
+  });
 }
 
-main().catch(console.error);
+main().catch((err) => {
+  console.error(err);
+  process.exit(1);
+});

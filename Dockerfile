@@ -18,4 +18,4 @@ RUN echo "=== Checking dist structure ===" && find dist -name "*.js" | head -20
 EXPOSE 3000
 
 # Start MCP server
-CMD ["node", "dist/index.js"]
+CMD ["node", "dist/mcp-server/src/index.js"]
