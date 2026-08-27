@@ -1,18 +1,11 @@
-FROM node:20.14-alpine
+FROM node:22-alpine
 
 WORKDIR /app
 
-# Copy package files first
-COPY package*.json ./
-COPY packages/*/package.json ./packages/
-
-# Update npm to version that supports workspace protocol
-RUN npm install -g npm@12.0.0 --force
-
-# Copy all remaining files
+# Copy all files
 COPY . .
 
-# Clean install with the new npm
+# Clean install
 RUN rm -rf node_modules package-lock.json
 RUN npm install
 
