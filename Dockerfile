@@ -1,18 +1,15 @@
 FROM node:20-alpine
 
-# Install pnpm
-RUN npm install -g pnpm
-
 WORKDIR /app
 
 # Copy all files
 COPY . .
 
-# Install dependencies with pnpm
-RUN pnpm install
+# Install dependencies with npm (matches root package.json workspaces)
+RUN npm install
 
 # Build all packages
-RUN pnpm run build
+RUN npm run build
 
 # Expose port
 EXPOSE 3000
