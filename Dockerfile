@@ -1,24 +1,20 @@
-FROM node:20-alpine
+FROM node:20.14-alpine
 
 WORKDIR /app
 
-# Copy all files
+# Copy package files first
+COPY package*.json ./
+COPY packages/*/package.json ./packages/
+
+# Update npm to version that supports workspace protocol
+RUN npm install -g npm@12.0.0 --force
+
+# Copy all remaining files
 COPY . .
 
-# Upgrade npm to support workspace protocol
-RUN npm install -g npm@latest
-
-# Debug: verify file structure
-RUN ls -la && echo "=== package.json ===" && cat package.json && echo "=== packages dir ===" && ls -la packages/
-
-# Remove any cached node_modules to ensure clean install
+# Clean install with the new npm
 RUN rm -rf node_modules package-lock.json
-
-# Generate package-lock.json and install all dependencies (including devDependencies)
-RUN npm install --verbose 2>&1 | tail -50
-
-# Verify typescript is installed
-RUN echo "=== Checking TypeScript installation ===" && ls -la node_modules/.bin/tsc && which tsc
+RUN npm install
 
 # Build all packages
 RUN npm run build
@@ -26,5 +22,5 @@ RUN npm run build
 # Expose port
 EXPOSE 3000
 
-# Start MCP server from the compiled output
+# Start MCP server
 CMD ["node", "dist/packages/mcp-server/src/index.js"]
