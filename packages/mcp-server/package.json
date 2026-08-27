@@ -11,8 +11,8 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^0.7.0",
-    "@rel-intel/core": "workspace:*",
-    "@rel-intel/db": "workspace:*",
+    "@rel-intel/core": "*",
+    "@rel-intel/db": "*",
     "express": "^4.18.2",
     "zod": "^3.22.4"
   },
