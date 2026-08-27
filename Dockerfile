@@ -17,5 +17,5 @@ RUN echo "=== Checking dist structure ===" && find dist -name "*.js" | head -20
 # Expose port
 EXPOSE 3000
 
-# Start MCP server from wherever it compiled to
-CMD ["node", "dist/packages/mcp-server/src/index.js"]
+# Start MCP server
+CMD ["node", "dist/index.js"]
