@@ -1,0 +1,21 @@
+{
+  "name": "relationship-intel",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "packages/db",
+    "packages/core",
+    "packages/mcp-server"
+  ],
+  "scripts": {
+    "build": "npm -w packages/db -w packages/core -w packages/mcp-server run build",
+    "dev": "concurrently npm:dev:*",
+    "dev:db": "npm -w packages/db run dev",
+    "dev:core": "npm -w packages/core run dev",
+    "dev:mcp": "npm -w packages/mcp-server run dev",
+    "migrate": "npm -w packages/db run migrate"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.0"
+  }
+}
