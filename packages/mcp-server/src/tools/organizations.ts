@@ -15,7 +15,7 @@ export const createOrganization = {
   inputSchema: {
     name: z.string().describe("Organization name"),
     org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "other"]).describe("Type of organization"),
-    ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD"]).optional().describe("Ownership category for utilities"),
+    ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"]).optional().describe("Ownership category for utilities"),
     sector: sector.optional().describe("Utility sector: electric, gas, water, or multi (serves more than one)"),
     state: z.string().optional().describe("State"),
     meter_count: z.number().optional().describe("Meter count for utilities"),
@@ -35,7 +35,7 @@ export const updateOrganization = {
     id: z.string().describe("Organization ID"),
     name: z.string().optional().describe("Organization name"),
     org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "other"]).optional().describe("Type of organization"),
-    ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD"]).optional().describe("Ownership category"),
+    ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"]).optional().describe("Ownership category"),
     sector: sector.optional().describe("Utility sector: electric, gas, water, or multi"),
     state: z.string().optional().describe("State"),
     meter_count: z.number().optional().describe("Meter count"),

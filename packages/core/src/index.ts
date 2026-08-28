@@ -6,7 +6,7 @@ export const OrganizationSchema = z.object({
   id: z.string().optional(),
   name: z.string(),
   org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "other"]),
-  ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD"]).optional(),
+  ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"]).optional(),
   sector: z.enum(["electric", "gas", "water", "multi"]).optional(),
   state: z.string().optional(),
   meter_count: z.number().optional(),

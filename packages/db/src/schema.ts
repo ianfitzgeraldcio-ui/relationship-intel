@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS organizations (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
   org_type TEXT NOT NULL CHECK (org_type IN ('utility', 'regulator', 'rto_iso', 'firm', 'other')),
-  ownership_category TEXT CHECK (ownership_category IN ('IOU', 'Cooperative', 'Municipal', 'PUD')),
+  ownership_category TEXT CHECK (ownership_category IN ('IOU', 'Cooperative', 'Municipal', 'PUD', 'Crown Corp')),
   sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi')),
   state TEXT,
   meter_count INTEGER,
@@ -21,6 +21,15 @@ CREATE TABLE IF NOT EXISTS organizations (
 -- re-run against a database that was already created without them.
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi'));
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS annual_revenue BIGINT;
+
+-- Widen the ownership_category check constraint to allow 'Crown Corp'
+-- (BC Hydro, SaskPower, etc.). Postgres names an inline column CHECK
+-- constraint <table>_<column>_check by default, so this drop/recreate
+-- is safe to run on every boot regardless of whether it's already
+-- been widened.
+ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_ownership_category_check;
+ALTER TABLE organizations ADD CONSTRAINT organizations_ownership_category_check
+  CHECK (ownership_category IN ('IOU', 'Cooperative', 'Municipal', 'PUD', 'Crown Corp'));
 
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,
