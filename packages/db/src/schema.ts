@@ -11,14 +11,16 @@ CREATE TABLE IF NOT EXISTS organizations (
   sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi')),
   state TEXT,
   meter_count INTEGER,
+  annual_revenue BIGINT,
   website TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- Added after the initial deploy - IF NOT EXISTS makes this safe to
--- re-run against a database that was already created without it.
+-- Added after the initial deploy - IF NOT EXISTS makes each safe to
+-- re-run against a database that was already created without them.
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi'));
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS annual_revenue BIGINT;
 
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,

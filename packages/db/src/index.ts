@@ -30,6 +30,7 @@ export interface OrganizationInput {
   sector?: string;
   state?: string;
   meter_count?: number;
+  annual_revenue?: number;
   website?: string;
   notes?: string;
 }
@@ -38,9 +39,9 @@ export const organizations = {
   async create(input: OrganizationInput) {
     const id = genId("org");
     const { rows } = await pool.query(
-      `INSERT INTO organizations (id, name, org_type, ownership_category, sector, state, meter_count, website, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
-      [id, input.name, input.org_type, input.ownership_category ?? null, input.sector ?? null, input.state ?? null, input.meter_count ?? null, input.website ?? null, input.notes ?? null]
+      `INSERT INTO organizations (id, name, org_type, ownership_category, sector, state, meter_count, annual_revenue, website, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) RETURNING *`,
+      [id, input.name, input.org_type, input.ownership_category ?? null, input.sector ?? null, input.state ?? null, input.meter_count ?? null, input.annual_revenue ?? null, input.website ?? null, input.notes ?? null]
     );
     return rows[0];
   },
@@ -54,17 +55,22 @@ export const organizations = {
     const { rows } = await pool.query(`SELECT * FROM organizations WHERE id = $1`, [id]);
     return rows[0] ?? null;
   },
-  async search(query: string, filters: { state?: string; org_type?: string; sector?: string } = {}) {
+  async search(query: string, filters: { state?: string; org_type?: string; sector?: string; min_revenue?: number } = {}) {
     const { rows } = await pool.query(
       `SELECT * FROM organizations
        WHERE name ILIKE $1
          AND ($2::text IS NULL OR state = $2)
          AND ($3::text IS NULL OR org_type = $3)
          AND ($4::text IS NULL OR sector = $4)
+         AND ($5::bigint IS NULL OR annual_revenue >= $5)
        ORDER BY name`,
-      [`%${query}%`, filters.state ?? null, filters.org_type ?? null, filters.sector ?? null]
+      [`%${query}%`, filters.state ?? null, filters.org_type ?? null, filters.sector ?? null, filters.min_revenue ?? null]
     );
     return rows;
+  },
+  async remove(id: string) {
+    const { rows } = await pool.query(`DELETE FROM organizations WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] ?? null;
   },
 };
 
@@ -111,6 +117,10 @@ export const contacts = {
       [`%${query}%`, filters.organization_id ?? null, filters.role_category ?? null, filters.is_current ?? null]
     );
     return rows;
+  },
+  async remove(id: string) {
+    const { rows } = await pool.query(`DELETE FROM contacts WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] ?? null;
   },
   async addPositionHistory(input: { contact_id: string; organization_id: string; title: string; start_date?: string; end_date?: string }) {
     const id = genId("position");

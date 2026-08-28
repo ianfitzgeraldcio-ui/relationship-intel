@@ -10,6 +10,7 @@ export const OrganizationSchema = z.object({
   sector: z.enum(["electric", "gas", "water", "multi"]).optional(),
   state: z.string().optional(),
   meter_count: z.number().optional(),
+  annual_revenue: z.number().optional(),
   website: z.string().optional(),
   notes: z.string().optional(),
 });

@@ -8,6 +8,9 @@ function result(data: unknown) {
 const roleCategory = z.enum(["executive", "regulatory_affairs", "board_member", "procurement", "technical", "other"]);
 const decisionAuthority = z.enum(["decision_maker", "influencer", "gatekeeper", "unknown"]);
 
+// Postgres error code for a foreign-key violation.
+const FOREIGN_KEY_VIOLATION = "23503";
+
 export const createContact = {
   description: "Create a new contact at an organization.",
   inputSchema: {
@@ -78,6 +81,25 @@ export const searchContacts = {
       is_current: input.is_current,
     });
     return result({ success: true, contacts: results });
+  },
+};
+
+export const deleteContact = {
+  description: "Permanently delete a contact. Fails if relationships or position history still reference it.",
+  inputSchema: {
+    id: z.string().describe("Contact ID"),
+  },
+  async handler(input: any) {
+    try {
+      const contact = await contacts.remove(input.id);
+      if (!contact) return result({ success: false, error: "Contact not found" });
+      return result({ success: true, contact });
+    } catch (err: any) {
+      if (err?.code === FOREIGN_KEY_VIOLATION) {
+        return result({ success: false, error: "Cannot delete: relationships or position history still reference this contact. Delete those first." });
+      }
+      throw err;
+    }
   },
 };
 
