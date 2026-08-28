@@ -27,6 +27,7 @@ export interface OrganizationInput {
   name: string;
   org_type: string;
   ownership_category?: string;
+  sector?: string;
   state?: string;
   meter_count?: number;
   website?: string;
@@ -37,9 +38,9 @@ export const organizations = {
   async create(input: OrganizationInput) {
     const id = genId("org");
     const { rows } = await pool.query(
-      `INSERT INTO organizations (id, name, org_type, ownership_category, state, meter_count, website, notes)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *`,
-      [id, input.name, input.org_type, input.ownership_category ?? null, input.state ?? null, input.meter_count ?? null, input.website ?? null, input.notes ?? null]
+      `INSERT INTO organizations (id, name, org_type, ownership_category, sector, state, meter_count, website, notes)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING *`,
+      [id, input.name, input.org_type, input.ownership_category ?? null, input.sector ?? null, input.state ?? null, input.meter_count ?? null, input.website ?? null, input.notes ?? null]
     );
     return rows[0];
   },
@@ -53,14 +54,15 @@ export const organizations = {
     const { rows } = await pool.query(`SELECT * FROM organizations WHERE id = $1`, [id]);
     return rows[0] ?? null;
   },
-  async search(query: string, filters: { state?: string; org_type?: string } = {}) {
+  async search(query: string, filters: { state?: string; org_type?: string; sector?: string } = {}) {
     const { rows } = await pool.query(
       `SELECT * FROM organizations
        WHERE name ILIKE $1
          AND ($2::text IS NULL OR state = $2)
          AND ($3::text IS NULL OR org_type = $3)
+         AND ($4::text IS NULL OR sector = $4)
        ORDER BY name`,
-      [`%${query}%`, filters.state ?? null, filters.org_type ?? null]
+      [`%${query}%`, filters.state ?? null, filters.org_type ?? null, filters.sector ?? null]
     );
     return rows;
   },

@@ -8,12 +8,17 @@ CREATE TABLE IF NOT EXISTS organizations (
   name TEXT NOT NULL,
   org_type TEXT NOT NULL CHECK (org_type IN ('utility', 'regulator', 'rto_iso', 'firm', 'other')),
   ownership_category TEXT CHECK (ownership_category IN ('IOU', 'Cooperative', 'Municipal', 'PUD')),
+  sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi')),
   state TEXT,
   meter_count INTEGER,
   website TEXT,
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Added after the initial deploy - IF NOT EXISTS makes this safe to
+-- re-run against a database that was already created without it.
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi'));
 
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,
