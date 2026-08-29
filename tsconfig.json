@@ -18,7 +18,8 @@
   "include": [
     "packages/core/src/**/*.ts",
     "packages/db/src/**/*.ts",
-    "packages/mcp-server/src/**/*.ts"
+    "packages/mcp-server/src/**/*.ts",
+    "packages/web/src/**/*.ts"
   ],
   "exclude": ["node_modules"]
 }

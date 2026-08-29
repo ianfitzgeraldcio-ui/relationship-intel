@@ -181,6 +181,10 @@ export const firmColleagues = {
     );
     return rows[0];
   },
+  async findAll() {
+    const { rows } = await pool.query(`SELECT * FROM firm_colleagues ORDER BY name`);
+    return rows;
+  },
 };
 
 export const relationships = {
