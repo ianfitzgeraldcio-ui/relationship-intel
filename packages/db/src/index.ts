@@ -133,10 +133,24 @@ export const contacts = {
     return rows[0];
   },
   async getProfile(contactId: string) {
-    const contact = await contacts.findById(contactId);
+    const { rows: contactRows } = await pool.query(
+      `SELECT c.*, o.name AS organization_name
+       FROM contacts c
+       JOIN organizations o ON o.id = c.organization_id
+       WHERE c.id = $1`,
+      [contactId]
+    );
+    const contact = contactRows[0];
     if (!contact) return null;
     const [positions, relationshipRows, interactionRows] = await Promise.all([
-      pool.query(`SELECT * FROM contact_position_history WHERE contact_id = $1 ORDER BY start_date DESC NULLS LAST`, [contactId]),
+      pool.query(
+        `SELECT p.*, o.name AS organization_name
+         FROM contact_position_history p
+         JOIN organizations o ON o.id = p.organization_id
+         WHERE p.contact_id = $1
+         ORDER BY p.start_date DESC NULLS LAST`,
+        [contactId]
+      ),
       pool.query(
         `SELECT r.*, fc.name AS firm_colleague_name
          FROM relationships r

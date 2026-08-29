@@ -100,7 +100,7 @@ export default function ContactDetailPage() {
         </div>
         <div>
           <span className="field-label">Organization</span>
-          <Link to={`/organizations/${contact.organization_id}`}>{contact.organization_id}</Link>
+          <Link to={`/organizations/${contact.organization_id}`}>{contact.organization_name}</Link>
         </div>
         <div>
           <span className="field-label">Role</span>
@@ -236,7 +236,7 @@ export default function ContactDetailPage() {
                 <tr key={p.id}>
                   <td>{p.title}</td>
                   <td>
-                    <Link to={`/organizations/${p.organization_id}`}>{p.organization_id}</Link>
+                    <Link to={`/organizations/${p.organization_id}`}>{p.organization_name}</Link>
                   </td>
                   <td>{p.start_date ? new Date(p.start_date).toLocaleDateString() : "—"}</td>
                   <td>{p.end_date ? new Date(p.end_date).toLocaleDateString() : "—"}</td>
