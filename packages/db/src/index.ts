@@ -383,10 +383,12 @@ export const opportunities = {
   },
   async search(filters: { organization_id?: string; stage?: string } = {}) {
     const { rows } = await pool.query(
-      `SELECT * FROM opportunities
-       WHERE ($1::text IS NULL OR organization_id = $1)
-         AND ($2::text IS NULL OR stage = $2)
-       ORDER BY created_at DESC`,
+      `SELECT o.*, org.name AS organization_name
+       FROM opportunities o
+       JOIN organizations org ON org.id = o.organization_id
+       WHERE ($1::text IS NULL OR o.organization_id = $1)
+         AND ($2::text IS NULL OR o.stage = $2)
+       ORDER BY o.created_at DESC`,
       [filters.organization_id ?? null, filters.stage ?? null]
     );
     return rows;

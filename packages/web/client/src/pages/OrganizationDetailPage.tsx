@@ -4,6 +4,8 @@ import { api } from "../api";
 import Modal from "../components/Modal";
 import OrganizationForm from "../components/OrganizationForm";
 import type { OrganizationFormValues } from "../components/OrganizationForm";
+import OpportunityForm from "../components/OpportunityForm";
+import type { OpportunityFormValues } from "../components/OpportunityForm";
 
 export default function OrganizationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +15,7 @@ export default function OrganizationDetailPage() {
   const [relationships, setRelationships] = useState<any[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
+  const [showNewOpportunity, setShowNewOpportunity] = useState(false);
 
   async function load() {
     if (!id) return;
@@ -39,6 +42,12 @@ export default function OrganizationDetailPage() {
     if (!id) return;
     await api.organizations.update(id, values);
     setShowEdit(false);
+    load();
+  }
+
+  async function handleCreateOpportunity(values: OpportunityFormValues) {
+    await api.opportunities.create(values);
+    setShowNewOpportunity(false);
     load();
   }
 
@@ -124,7 +133,12 @@ export default function OrganizationDetailPage() {
       </section>
 
       <section>
-        <h3>Open opportunities</h3>
+        <div className="section-header">
+          <h3>Open opportunities</h3>
+          <button className="secondary-button" onClick={() => setShowNewOpportunity(true)}>
+            + Add
+          </button>
+        </div>
         {org.summary.open_opportunities.length === 0 ? (
           <p className="muted">None.</p>
         ) : (
@@ -214,6 +228,16 @@ export default function OrganizationDetailPage() {
       {showEdit && (
         <Modal title={`Edit ${org.name}`} onClose={() => setShowEdit(false)}>
           <OrganizationForm initial={org} onSubmit={handleUpdate} onCancel={() => setShowEdit(false)} />
+        </Modal>
+      )}
+      {showNewOpportunity && id && (
+        <Modal title="New Opportunity" onClose={() => setShowNewOpportunity(false)}>
+          <OpportunityForm
+            fixedOrganizationId={id}
+            onSubmit={handleCreateOpportunity}
+            onCancel={() => setShowNewOpportunity(false)}
+            submitLabel="Create"
+          />
         </Modal>
       )}
     </div>
