@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { contacts, contactConnections, firmColleagues } from "../../../db/src/index.js";
-import { handleDbError } from "../util.js";
 
 export const contactsRouter = Router();
 
@@ -38,16 +37,12 @@ contactsRouter.patch("/contacts/:id", async (req, res) => {
 });
 
 contactsRouter.delete("/contacts/:id", async (req, res) => {
-  try {
-    const contact = await contacts.remove(req.params.id);
-    if (!contact) {
-      res.status(404).json({ error: "Contact not found" });
-      return;
-    }
-    res.json(contact);
-  } catch (err) {
-    handleDbError(err, res, "Cannot delete: relationships or position history still reference this contact. Delete those first.");
+  const contact = await contacts.remove(req.params.id);
+  if (!contact) {
+    res.status(404).json({ error: "Contact not found" });
+    return;
   }
+  res.json(contact);
 });
 
 contactsRouter.post("/contacts/:id/position-history", async (req, res) => {

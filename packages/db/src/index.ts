@@ -120,8 +120,26 @@ export const contacts = {
     return rows;
   },
   async remove(id: string) {
-    const { rows } = await pool.query(`DELETE FROM contacts WHERE id = $1 RETURNING *`, [id]);
-    return rows[0] ?? null;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(
+        `DELETE FROM interactions WHERE relationship_id IN (SELECT id FROM relationships WHERE contact_id = $1)`,
+        [id]
+      );
+      await client.query(`DELETE FROM relationships WHERE contact_id = $1`, [id]);
+      await client.query(`DELETE FROM contact_position_history WHERE contact_id = $1`, [id]);
+      await client.query(`DELETE FROM contact_connections WHERE contact_id_a = $1 OR contact_id_b = $1`, [id]);
+      await client.query(`DELETE FROM opportunity_contacts WHERE contact_id = $1`, [id]);
+      const { rows } = await client.query(`DELETE FROM contacts WHERE id = $1 RETURNING *`, [id]);
+      await client.query("COMMIT");
+      return rows[0] ?? null;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   },
   async addPositionHistory(input: { contact_id: string; organization_id: string; title: string; start_date?: string; end_date?: string }) {
     const id = genId("position");
