@@ -13,6 +13,7 @@ RUN npm run build
 
 # Debug: check what was built
 RUN echo "=== Checking dist structure ===" && find dist -name "*.js" | head -20
+RUN echo "=== Checking web client build ===" && find packages/web/client/dist -type f | head -20
 
 # Expose port
 EXPOSE 3000

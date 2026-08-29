@@ -1,5 +1,6 @@
 import express from "express";
 import session from "express-session";
+import path from "node:path";
 import { runMigrations } from "../../db/src/index.js";
 import { authRouter, requireAuth } from "./auth.js";
 import { organizationsRouter } from "./routes/organizations.js";
@@ -50,10 +51,13 @@ async function main() {
   apiRouter.use(reportsRouter);
   app.use("/api", apiRouter);
 
-  // Stage 1: no frontend build yet. Replaced with the built React app's
-  // static files + SPA fallback in Stage 2.
-  app.get("/", (_req, res) => {
-    res.send("Relationship Intel web backend is running. Frontend arrives in Stage 2.");
+  // process.cwd() is /app inside the container regardless of where this
+  // compiled file itself sits - avoids the relative-path-from-dist class
+  // of bug that broke this project's builds more than once before.
+  const clientDist = path.join(process.cwd(), "packages/web/client/dist");
+  app.use(express.static(clientDist));
+  app.get("*", (_req, res) => {
+    res.sendFile(path.join(clientDist, "index.html"));
   });
 
   const port = Number(process.env.PORT) || 3000;
