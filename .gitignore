@@ -10,3 +10,4 @@ npm-debug.log*
 *.swp
 *.swo
 .env.*.local
+SECRETS.local.md

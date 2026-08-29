@@ -9,6 +9,7 @@ import { relationshipsRouter } from "./routes/relationships.js";
 import { interactionsRouter } from "./routes/interactions.js";
 import { opportunitiesRouter } from "./routes/opportunities.js";
 import { reportsRouter } from "./routes/reports.js";
+import { adminRouter } from "./routes/admin.js";
 
 async function main() {
   console.log("Relationship Intelligence Web UX v0.1.0");
@@ -49,6 +50,7 @@ async function main() {
   apiRouter.use(interactionsRouter);
   apiRouter.use(opportunitiesRouter);
   apiRouter.use(reportsRouter);
+  apiRouter.use(adminRouter);
   app.use("/api", apiRouter);
 
   // process.cwd() is /app inside the container regardless of where this
