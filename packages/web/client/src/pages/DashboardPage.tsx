@@ -15,7 +15,7 @@ interface HealthSummary {
   }[];
 }
 
-export default function DashboardPage({ onLogout }: { onLogout: () => void }) {
+export default function DashboardPage() {
   const [summary, setSummary] = useState<HealthSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,20 +26,8 @@ export default function DashboardPage({ onLogout }: { onLogout: () => void }) {
       .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
   }, []);
 
-  async function handleLogout() {
-    await api.logout();
-    onLogout();
-  }
-
   return (
-    <div className="app-shell">
-      <header className="app-header">
-        <h1>Relationship Intel</h1>
-        <button className="link-button" onClick={handleLogout}>
-          Sign out
-        </button>
-      </header>
-      <main className="dashboard">
+    <div className="dashboard">
         {error && <p className="error-banner">{error}</p>}
         {!summary && !error && <p className="muted">Loading dashboard…</p>}
         {summary && (
@@ -114,7 +102,6 @@ export default function DashboardPage({ onLogout }: { onLogout: () => void }) {
             </section>
           </>
         )}
-      </main>
     </div>
   );
 }
