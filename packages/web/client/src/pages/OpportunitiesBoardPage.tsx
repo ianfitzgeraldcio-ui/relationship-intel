@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
 import Modal from "../components/Modal";
 import OpportunityForm from "../components/OpportunityForm";
@@ -34,6 +35,7 @@ export default function OpportunitiesBoardPage() {
   const [editing, setEditing] = useState<Opportunity | null>(null);
   const [draggedId, setDraggedId] = useState<string | null>(null);
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
+  const [searchParams, setSearchParams] = useSearchParams();
 
   async function load() {
     try {
@@ -48,6 +50,16 @@ export default function OpportunitiesBoardPage() {
   useEffect(() => {
     load();
   }, []);
+
+  // Deep link from the dashboard (?open=<opportunity id>) opens straight
+  // into the edit modal instead of leaving the visitor to find the card.
+  useEffect(() => {
+    const openId = searchParams.get("open");
+    if (!openId || opportunities.length === 0) return;
+    const match = opportunities.find((o) => o.id === openId);
+    if (match) setEditing(match);
+    setSearchParams({}, { replace: true });
+  }, [opportunities, searchParams]);
 
   async function handleCreate(values: OpportunityFormValues) {
     await api.opportunities.create(values);

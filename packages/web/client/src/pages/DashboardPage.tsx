@@ -1,12 +1,22 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 
 interface HealthSummary {
   temperature_distribution: { temperature: string; count: string }[];
   open_pipeline_by_stage: { stage: string; count: string; total_value: string }[];
+  open_opportunities: {
+    id: string;
+    name: string;
+    organization_name: string;
+    stage: string;
+    estimated_value: string | null;
+    probability: number | null;
+  }[];
   drifting_relationship_count: number;
   drifting_relationships: {
     relationship_id: string;
+    contact_id: string;
     contact_name: string;
     strength_score: number;
     temperature: string | null;
@@ -46,24 +56,28 @@ export default function DashboardPage() {
             </section>
 
             <section>
-              <h2>Open pipeline by stage</h2>
-              {summary.open_pipeline_by_stage.length === 0 ? (
+              <h2>Open pipeline</h2>
+              {summary.open_opportunities.length === 0 ? (
                 <p className="muted">No open opportunities.</p>
               ) : (
                 <table className="data-table">
                   <thead>
                     <tr>
+                      <th>Opportunity</th>
+                      <th>Organization</th>
                       <th>Stage</th>
-                      <th>Count</th>
-                      <th>Total value</th>
+                      <th>Value</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {summary.open_pipeline_by_stage.map((s) => (
-                      <tr key={s.stage}>
-                        <td>{s.stage}</td>
-                        <td>{s.count}</td>
-                        <td>${Number(s.total_value).toLocaleString()}</td>
+                    {summary.open_opportunities.map((o) => (
+                      <tr key={o.id}>
+                        <td>
+                          <Link to={`/opportunities?open=${o.id}`}>{o.name}</Link>
+                        </td>
+                        <td>{o.organization_name}</td>
+                        <td>{o.stage}</td>
+                        <td>{o.estimated_value ? `$${Number(o.estimated_value).toLocaleString()}` : "—"}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -89,7 +103,9 @@ export default function DashboardPage() {
                   <tbody>
                     {summary.drifting_relationships.map((r) => (
                       <tr key={r.relationship_id}>
-                        <td>{r.contact_name}</td>
+                        <td>
+                          <Link to={`/contacts/${r.contact_id}`}>{r.contact_name}</Link>
+                        </td>
                         <td>{r.strength_score}</td>
                         <td>{r.temperature ?? "—"}</td>
                         <td>{r.days_since_last_interaction}</td>

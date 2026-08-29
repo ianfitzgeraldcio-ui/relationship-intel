@@ -443,17 +443,25 @@ export const opportunities = {
 
 export const reports = {
   async getRelationshipHealthSummary() {
-    const [temperature, pipeline, drifting] = await Promise.all([
+    const [temperature, pipeline, openOpportunities, drifting] = await Promise.all([
       pool.query(`SELECT COALESCE(temperature, 'unset') AS temperature, COUNT(*) AS count FROM relationships GROUP BY temperature`),
       pool.query(
         `SELECT stage, COUNT(*) AS count, COALESCE(SUM(estimated_value), 0) AS total_value
          FROM opportunities WHERE stage NOT IN ('won', 'lost') GROUP BY stage`
+      ),
+      pool.query(
+        `SELECT o.id, o.name, o.stage, o.estimated_value, o.probability, org.name AS organization_name
+         FROM opportunities o
+         JOIN organizations org ON org.id = o.organization_id
+         WHERE o.stage NOT IN ('won', 'lost')
+         ORDER BY o.created_at DESC`
       ),
       relationships.findDrifting(2),
     ]);
     return {
       temperature_distribution: temperature.rows,
       open_pipeline_by_stage: pipeline.rows,
+      open_opportunities: openOpportunities.rows,
       drifting_relationship_count: drifting.length,
       drifting_relationships: drifting,
     };
