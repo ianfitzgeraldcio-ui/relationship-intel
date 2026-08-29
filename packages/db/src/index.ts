@@ -1,6 +1,7 @@
 import pg from "pg";
 import { randomUUID } from "node:crypto";
 import { SCHEMA_SQL } from "./schema.js";
+import { calculateEffectiveStrength } from "../../core/src/index.js";
 
 const { Pool } = pg;
 
@@ -155,11 +156,20 @@ export const contacts = {
     return {
       contact,
       position_history: positions.rows,
-      relationships: relationshipRows.rows,
+      relationships: withEffectiveStrength(relationshipRows.rows),
       recent_interactions: interactionRows.rows,
     };
   },
 };
+
+// Decorates relationship rows with a decay-adjusted effective_strength,
+// using the previously-unused calculateEffectiveStrength from core.
+function withEffectiveStrength<T extends { strength_score: number; last_interaction_at: string | null }>(rows: T[]) {
+  return rows.map((r) => ({
+    ...r,
+    effective_strength: calculateEffectiveStrength(r.strength_score, r.last_interaction_at ?? undefined),
+  }));
+}
 
 export const firmColleagues = {
   async create(input: { name: string; email: string; department?: string; role?: string }) {
@@ -187,6 +197,13 @@ export const relationships = {
     const { rows } = await pool.query(`UPDATE relationships SET strength_score = $2 WHERE id = $1 RETURNING *`, [relationshipId, strengthScore]);
     return rows[0] ?? null;
   },
+  async updateTemperature(relationshipId: string, temperature: string) {
+    const { rows } = await pool.query(
+      `UPDATE relationships SET temperature = $2, temperature_updated_at = now() WHERE id = $1 RETURNING *`,
+      [relationshipId, temperature]
+    );
+    return rows[0] ?? null;
+  },
   async findById(id: string) {
     const { rows } = await pool.query(`SELECT * FROM relationships WHERE id = $1`, [id]);
     return rows[0] ?? null;
@@ -195,7 +212,7 @@ export const relationships = {
     const { rows } = await pool.query(
       `SELECT
          c.id AS contact_id, c.name AS contact_name,
-         r.id AS relationship_id, r.relationship_type, r.strength_score, r.last_interaction_at, r.notes AS relationship_notes,
+         r.id AS relationship_id, r.relationship_type, r.strength_score, r.temperature, r.last_interaction_at, r.notes AS relationship_notes,
          fc.id AS firm_colleague_id, fc.name AS firm_colleague_name
        FROM contacts c
        JOIN relationships r ON r.contact_id = c.id
@@ -203,15 +220,35 @@ export const relationships = {
        WHERE c.organization_id = $1`,
       [organizationId]
     );
-    return rows;
+    return withEffectiveStrength(rows);
   },
-  async linkToOutcome(relationshipId: string, outcome: { outcome_type: string; outcome_value: string; revenue?: number }) {
-    const existing = await relationships.findById(relationshipId);
-    if (!existing) return null;
-    const outcomeLine = `[outcome:${outcome.outcome_type}] ${outcome.outcome_value}${outcome.revenue ? ` ($${outcome.revenue})` : ""}`;
-    const notes = existing.notes ? `${existing.notes}\n${outcomeLine}` : outcomeLine;
-    const { rows } = await pool.query(`UPDATE relationships SET notes = $2 WHERE id = $1 RETURNING *`, [relationshipId, notes]);
-    return rows[0];
+  // Flags relationships going quiet relative to their OWN historical
+  // contact rhythm, not a fixed global window. Relationships with fewer
+  // than 2 interactions fall back to a 60-day baseline.
+  async findDrifting(multiplier: number = 2) {
+    const { rows } = await pool.query(
+      `WITH gaps AS (
+         SELECT relationship_id, date - LAG(date) OVER (PARTITION BY relationship_id ORDER BY date) AS gap_days
+         FROM interactions
+       ),
+       baselines AS (
+         SELECT relationship_id, AVG(gap_days) AS avg_gap_days, COUNT(*) AS gap_count
+         FROM gaps WHERE gap_days IS NOT NULL GROUP BY relationship_id
+       )
+       SELECT
+         r.id AS relationship_id, c.id AS contact_id, c.name AS contact_name,
+         r.strength_score, r.temperature, r.last_interaction_at,
+         COALESCE(b.avg_gap_days, 60) AS baseline_gap_days,
+         EXTRACT(DAY FROM now() - r.last_interaction_at) AS days_since_last_interaction
+       FROM relationships r
+       JOIN contacts c ON c.id = r.contact_id
+       LEFT JOIN baselines b ON b.relationship_id = r.id
+       WHERE r.last_interaction_at IS NOT NULL
+         AND now() - r.last_interaction_at > (COALESCE(b.avg_gap_days, 60) * $1) * INTERVAL '1 day'
+       ORDER BY days_since_last_interaction DESC`,
+      [multiplier]
+    );
+    return rows;
   },
 };
 
@@ -244,5 +281,174 @@ export const interactions = {
       [String(days), filters.relationship_id ?? null, filters.contact_id ?? null, limit]
     );
     return rows;
+  },
+};
+
+export const contactConnections = {
+  async create(input: { contact_id_a: string; contact_id_b: string; connection_type: string; referral_willingness?: string; notes?: string }) {
+    const id = genId("conn");
+    const { rows } = await pool.query(
+      `INSERT INTO contact_connections (id, contact_id_a, contact_id_b, connection_type, referral_willingness, notes)
+       VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
+      [id, input.contact_id_a, input.contact_id_b, input.connection_type, input.referral_willingness ?? null, input.notes ?? null]
+    );
+    return rows[0];
+  },
+  async findForContact(contactId: string) {
+    const { rows } = await pool.query(
+      `SELECT cc.*,
+         CASE WHEN cc.contact_id_a = $1 THEN cc.contact_id_b ELSE cc.contact_id_a END AS other_contact_id,
+         CASE WHEN cc.contact_id_a = $1 THEN cb.name ELSE ca.name END AS other_contact_name
+       FROM contact_connections cc
+       JOIN contacts ca ON ca.id = cc.contact_id_a
+       JOIN contacts cb ON cb.id = cc.contact_id_b
+       WHERE cc.contact_id_a = $1 OR cc.contact_id_b = $1`,
+      [contactId]
+    );
+    return rows;
+  },
+  // Which of the contacts I already have a relationship with are
+  // connected to this target contact, and how willing they'd be to refer me.
+  // One-hop only - not full graph pathfinding.
+  async findWarmIntroPath(targetContactId: string) {
+    const { rows } = await pool.query(
+      `SELECT
+         cc.id AS connection_id,
+         ic.id AS intermediary_contact_id,
+         ic.name AS intermediary_contact_name,
+         cc.connection_type,
+         cc.referral_willingness,
+         r.id AS relationship_id,
+         r.strength_score,
+         r.temperature,
+         fc.name AS firm_colleague_name
+       FROM contact_connections cc
+       JOIN contacts ic ON ic.id = (CASE WHEN cc.contact_id_a = $1 THEN cc.contact_id_b ELSE cc.contact_id_a END)
+       JOIN relationships r ON r.contact_id = ic.id
+       JOIN firm_colleagues fc ON fc.id = r.firm_colleague_id
+       WHERE (cc.contact_id_a = $1 OR cc.contact_id_b = $1) AND ic.id <> $1
+       ORDER BY
+         CASE cc.referral_willingness
+           WHEN 'confirmed' THEN 1 WHEN 'likely' THEN 2 WHEN 'possible' THEN 3
+           WHEN 'unlikely' THEN 4 ELSE 5
+         END,
+         r.strength_score DESC`,
+      [targetContactId]
+    );
+    return rows;
+  },
+};
+
+export const opportunities = {
+  async create(input: { organization_id: string; name: string; stage?: string; estimated_value?: number; probability?: number; expected_close_date?: string; notes?: string }) {
+    const id = genId("opp");
+    const { rows } = await pool.query(
+      `INSERT INTO opportunities (id, organization_id, name, stage, estimated_value, probability, expected_close_date, notes)
+       VALUES ($1, $2, $3, COALESCE($4, 'identified'), $5, $6, $7, $8) RETURNING *`,
+      [id, input.organization_id, input.name, input.stage ?? null, input.estimated_value ?? null, input.probability ?? null, input.expected_close_date ?? null, input.notes ?? null]
+    );
+    return rows[0];
+  },
+  async update(id: string, updates: Partial<{ name: string; stage: string; estimated_value: number; probability: number; expected_close_date: string; actual_close_date: string; notes: string }>) {
+    const { setClause, values } = buildSetClause(updates, 2);
+    if (!setClause) return opportunities.findById(id);
+    const { rows } = await pool.query(`UPDATE opportunities SET ${setClause} WHERE id = $1 RETURNING *`, [id, ...values]);
+    return rows[0] ?? null;
+  },
+  async findById(id: string) {
+    const { rows } = await pool.query(`SELECT * FROM opportunities WHERE id = $1`, [id]);
+    return rows[0] ?? null;
+  },
+  async remove(id: string) {
+    const { rows } = await pool.query(`DELETE FROM opportunities WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] ?? null;
+  },
+  async search(filters: { organization_id?: string; stage?: string } = {}) {
+    const { rows } = await pool.query(
+      `SELECT * FROM opportunities
+       WHERE ($1::text IS NULL OR organization_id = $1)
+         AND ($2::text IS NULL OR stage = $2)
+       ORDER BY created_at DESC`,
+      [filters.organization_id ?? null, filters.stage ?? null]
+    );
+    return rows;
+  },
+  async addContact(input: { opportunity_id: string; contact_id: string; contact_role?: string }) {
+    const id = genId("oppcontact");
+    const { rows } = await pool.query(
+      `INSERT INTO opportunity_contacts (id, opportunity_id, contact_id, contact_role)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [id, input.opportunity_id, input.contact_id, input.contact_role ?? null]
+    );
+    return rows[0];
+  },
+  async getRevenueForecast(groupBy: "month" | "quarter" = "month") {
+    const [pipeline, won] = await Promise.all([
+      pool.query(
+        `SELECT date_trunc($1, expected_close_date) AS period,
+                SUM(estimated_value * COALESCE(probability, 0) / 100.0) AS weighted_value,
+                COUNT(*) AS opportunity_count
+         FROM opportunities
+         WHERE stage NOT IN ('won', 'lost') AND expected_close_date IS NOT NULL
+         GROUP BY period
+         ORDER BY period`,
+        [groupBy]
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(estimated_value), 0) AS total_won_revenue, COUNT(*) AS won_count
+         FROM opportunities WHERE stage = 'won'`
+      ),
+    ]);
+    return { forecast_by_period: pipeline.rows, closed_won: won.rows[0] };
+  },
+};
+
+export const reports = {
+  async getRelationshipHealthSummary() {
+    const [temperature, pipeline, drifting] = await Promise.all([
+      pool.query(`SELECT COALESCE(temperature, 'unset') AS temperature, COUNT(*) AS count FROM relationships GROUP BY temperature`),
+      pool.query(
+        `SELECT stage, COUNT(*) AS count, COALESCE(SUM(estimated_value), 0) AS total_value
+         FROM opportunities WHERE stage NOT IN ('won', 'lost') GROUP BY stage`
+      ),
+      relationships.findDrifting(2),
+    ]);
+    return {
+      temperature_distribution: temperature.rows,
+      open_pipeline_by_stage: pipeline.rows,
+      drifting_relationship_count: drifting.length,
+      drifting_relationships: drifting,
+    };
+  },
+  async getOrganizationSummary(organizationId: string) {
+    const [contactCount, relationshipCount, recentInteractionCount, openOpportunities, wonRevenue] = await Promise.all([
+      pool.query(`SELECT COUNT(*) AS count FROM contacts WHERE organization_id = $1`, [organizationId]),
+      pool.query(
+        `SELECT COUNT(*) AS count FROM relationships r JOIN contacts c ON c.id = r.contact_id WHERE c.organization_id = $1`,
+        [organizationId]
+      ),
+      pool.query(
+        `SELECT COUNT(*) AS count FROM interactions i
+         JOIN relationships r ON r.id = i.relationship_id
+         JOIN contacts c ON c.id = r.contact_id
+         WHERE c.organization_id = $1 AND i.date >= now() - INTERVAL '90 days'`,
+        [organizationId]
+      ),
+      pool.query(
+        `SELECT * FROM opportunities WHERE organization_id = $1 AND stage NOT IN ('won', 'lost') ORDER BY created_at DESC`,
+        [organizationId]
+      ),
+      pool.query(
+        `SELECT COALESCE(SUM(estimated_value), 0) AS total FROM opportunities WHERE organization_id = $1 AND stage = 'won'`,
+        [organizationId]
+      ),
+    ]);
+    return {
+      contact_count: Number(contactCount.rows[0].count),
+      relationship_count: Number(relationshipCount.rows[0].count),
+      interactions_last_90_days: Number(recentInteractionCount.rows[0].count),
+      open_opportunities: openOpportunities.rows,
+      won_revenue_to_date: wonRevenue.rows[0].total,
+    };
   },
 };

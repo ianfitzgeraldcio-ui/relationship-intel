@@ -86,4 +86,42 @@ CREATE TABLE IF NOT EXISTS interactions (
   notes TEXT,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Sales-interest signal, distinct from the manually-assessed strength_score.
+ALTER TABLE relationships ADD COLUMN IF NOT EXISTS temperature TEXT CHECK (temperature IN ('cold', 'cool', 'warm', 'hot'));
+ALTER TABLE relationships ADD COLUMN IF NOT EXISTS temperature_updated_at TIMESTAMPTZ;
+
+-- Who-knows-whom between any two contacts, independent of firm-colleague
+-- relationships. Powers warm-intro lookups.
+CREATE TABLE IF NOT EXISTS contact_connections (
+  id TEXT PRIMARY KEY,
+  contact_id_a TEXT NOT NULL REFERENCES contacts(id),
+  contact_id_b TEXT NOT NULL REFERENCES contacts(id),
+  connection_type TEXT NOT NULL CHECK (connection_type IN ('colleague', 'reports_to', 'former_colleague', 'friend', 'family', 'other')),
+  referral_willingness TEXT CHECK (referral_willingness IN ('unknown', 'unlikely', 'possible', 'likely', 'confirmed')),
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CHECK (contact_id_a <> contact_id_b)
+);
+
+CREATE TABLE IF NOT EXISTS opportunities (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL REFERENCES organizations(id),
+  name TEXT NOT NULL,
+  stage TEXT NOT NULL DEFAULT 'identified' CHECK (stage IN ('identified', 'qualifying', 'proposal', 'negotiation', 'won', 'lost')),
+  estimated_value BIGINT,
+  probability INTEGER CHECK (probability BETWEEN 0 AND 100),
+  expected_close_date DATE,
+  actual_close_date DATE,
+  notes TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE TABLE IF NOT EXISTS opportunity_contacts (
+  id TEXT PRIMARY KEY,
+  opportunity_id TEXT NOT NULL REFERENCES opportunities(id),
+  contact_id TEXT NOT NULL REFERENCES contacts(id),
+  contact_role TEXT CHECK (contact_role IN ('champion', 'economic_buyer', 'technical_evaluator', 'influencer', 'blocker', 'other')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
 `;

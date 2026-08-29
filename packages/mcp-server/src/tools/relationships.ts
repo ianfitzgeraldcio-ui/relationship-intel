@@ -44,18 +44,26 @@ export const getRelationshipMapForOrg = {
   },
 };
 
-export const linkRelationshipToOutcome = {
-  description: "Record a business outcome (proposal, engagement, renewal) tied to a relationship.",
+export const updateRelationshipTemperature = {
+  description: "Set the sales-interest signal (cold/cool/warm/hot) on a relationship. Distinct from strength_score, which measures the personal relationship rather than buying intent.",
   inputSchema: {
     relationship_id: z.string().describe("Relationship ID"),
-    outcome_type: z.enum(["proposal", "engagement", "renewal"]).describe("Type of business outcome"),
-    outcome_value: z.string().describe("Description or reference"),
-    revenue: z.number().optional().describe("Associated revenue"),
+    temperature: z.enum(["cold", "cool", "warm", "hot"]).describe("Current sales-interest temperature"),
   },
   async handler(input: any) {
-    const { relationship_id, ...outcome } = input;
-    const relationship = await relationships.linkToOutcome(relationship_id, outcome);
+    const relationship = await relationships.updateTemperature(input.relationship_id, input.temperature);
     if (!relationship) return result({ success: false, error: "Relationship not found" });
     return result({ success: true, relationship });
+  },
+};
+
+export const listDriftingRelationships = {
+  description: "Flag relationships that have gone quiet relative to their own normal contact rhythm (not a fixed global window).",
+  inputSchema: {
+    multiplier: z.number().optional().describe("How many times longer than the relationship's normal gap counts as drifting (defaults to 2)"),
+  },
+  async handler(input: any) {
+    const drifting = await relationships.findDrifting(input.multiplier ?? 2);
+    return result({ success: true, drifting_relationships: drifting });
   },
 };
