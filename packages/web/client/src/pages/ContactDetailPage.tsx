@@ -5,6 +5,7 @@ import { api } from "../api";
 import Modal from "../components/Modal";
 import ContactForm from "../components/ContactForm";
 import type { ContactFormValues } from "../components/ContactForm";
+import { formatDate, todayInPacific } from "../timezone";
 
 const TEMPERATURES = ["cold", "cool", "warm", "hot"];
 const RELATIONSHIP_TYPES = ["primary", "secondary", "historical", "introduced_by"];
@@ -250,7 +251,7 @@ export default function ContactDetailPage() {
             <tbody>
               {recent_interactions.map((i: any) => (
                 <tr key={i.id}>
-                  <td>{new Date(i.date).toLocaleDateString()}</td>
+                  <td>{formatDate(i.date)}</td>
                   <td>{i.interaction_type}</td>
                   <td>{i.summary}</td>
                   <td>{i.sentiment ?? "—"}</td>
@@ -293,8 +294,8 @@ export default function ContactDetailPage() {
                   <td>
                     <Link to={`/organizations/${p.organization_id}`}>{p.organization_name}</Link>
                   </td>
-                  <td>{p.start_date ? new Date(p.start_date).toLocaleDateString() : "—"}</td>
-                  <td>{p.end_date ? new Date(p.end_date).toLocaleDateString() : "—"}</td>
+                  <td>{p.start_date ? formatDate(p.start_date) : "—"}</td>
+                  <td>{p.end_date ? formatDate(p.end_date) : "—"}</td>
                   <td>
                     <button className="link-button" onClick={() => handleDeletePosition(p.id)}>
                       Delete
@@ -558,7 +559,7 @@ function InteractionForm({
 }) {
   const [relationshipId, setRelationshipId] = useState(relationships[0]?.id ?? "");
   const [interactionType, setInteractionType] = useState("call");
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [date, setDate] = useState(todayInPacific());
   const [summary, setSummary] = useState("");
   const [sentiment, setSentiment] = useState("");
   const [error, setError] = useState<string | null>(null);
