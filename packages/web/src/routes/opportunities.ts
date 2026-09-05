@@ -1,6 +1,5 @@
 import { Router } from "express";
 import { opportunities } from "../../../db/src/index.js";
-import { handleDbError } from "../util.js";
 
 export const opportunitiesRouter = Router();
 
@@ -28,16 +27,12 @@ opportunitiesRouter.patch("/opportunities/:id", async (req, res) => {
 });
 
 opportunitiesRouter.delete("/opportunities/:id", async (req, res) => {
-  try {
-    const opportunity = await opportunities.remove(req.params.id);
-    if (!opportunity) {
-      res.status(404).json({ error: "Opportunity not found" });
-      return;
-    }
-    res.json(opportunity);
-  } catch (err) {
-    handleDbError(err, res, "Cannot delete: contacts are still linked to this opportunity. Remove those links first.");
+  const opportunity = await opportunities.remove(req.params.id);
+  if (!opportunity) {
+    res.status(404).json({ error: "Opportunity not found" });
+    return;
   }
+  res.json(opportunity);
 });
 
 opportunitiesRouter.post("/opportunities/:id/contacts", async (req, res) => {

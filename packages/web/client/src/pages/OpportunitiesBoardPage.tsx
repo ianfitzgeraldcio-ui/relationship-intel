@@ -76,9 +76,13 @@ export default function OpportunitiesBoardPage() {
 
   async function handleDelete() {
     if (!editing || !confirm(`Delete "${editing.name}"?`)) return;
-    await api.opportunities.remove(editing.id);
-    setEditing(null);
-    load();
+    try {
+      await api.opportunities.remove(editing.id);
+      setEditing(null);
+      load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Delete failed");
+    }
   }
 
   async function moveToStage(id: string, stage: string) {

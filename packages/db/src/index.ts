@@ -423,8 +423,19 @@ export const opportunities = {
     return rows[0] ?? null;
   },
   async remove(id: string) {
-    const { rows } = await pool.query(`DELETE FROM opportunities WHERE id = $1 RETURNING *`, [id]);
-    return rows[0] ?? null;
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`DELETE FROM opportunity_contacts WHERE opportunity_id = $1`, [id]);
+      const { rows } = await client.query(`DELETE FROM opportunities WHERE id = $1 RETURNING *`, [id]);
+      await client.query("COMMIT");
+      return rows[0] ?? null;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
   },
   async search(filters: { organization_id?: string; stage?: string } = {}) {
     const { rows } = await pool.query(
