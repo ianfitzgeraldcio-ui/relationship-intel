@@ -51,7 +51,7 @@ export default function ContactsListPage() {
       </div>
       <input
         className="search-input"
-        placeholder="Search contacts by name or email…"
+        placeholder="Search contacts by name, title, role, or email…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />

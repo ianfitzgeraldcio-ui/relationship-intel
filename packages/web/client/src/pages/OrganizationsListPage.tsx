@@ -50,7 +50,7 @@ export default function OrganizationsListPage() {
       </div>
       <input
         className="search-input"
-        placeholder="Search organizations…"
+        placeholder="Search organizations by name, type, sector, or state…"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />

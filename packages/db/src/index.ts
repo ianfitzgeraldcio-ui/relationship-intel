@@ -59,7 +59,7 @@ export const organizations = {
   async search(query: string, filters: { state?: string; org_type?: string; sector?: string; min_revenue?: number } = {}) {
     const { rows } = await pool.query(
       `SELECT * FROM organizations
-       WHERE name ILIKE $1
+       WHERE (name ILIKE $1 OR org_type ILIKE $1 OR sector ILIKE $1 OR state ILIKE $1)
          AND ($2::text IS NULL OR state = $2)
          AND ($3::text IS NULL OR org_type = $3)
          AND ($4::text IS NULL OR sector = $4)
@@ -110,7 +110,7 @@ export const contacts = {
   async search(query: string, filters: { organization_id?: string; role_category?: string; is_current?: boolean } = {}) {
     const { rows } = await pool.query(
       `SELECT * FROM contacts
-       WHERE (name ILIKE $1 OR email ILIKE $1)
+       WHERE (name ILIKE $1 OR email ILIKE $1 OR title ILIKE $1 OR role_category ILIKE $1)
          AND ($2::text IS NULL OR organization_id = $2)
          AND ($3::text IS NULL OR role_category = $3)
          AND ($4::boolean IS NULL OR is_current = $4)
