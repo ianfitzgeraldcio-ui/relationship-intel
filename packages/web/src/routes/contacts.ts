@@ -50,6 +50,15 @@ contactsRouter.post("/contacts/:id/position-history", async (req, res) => {
   res.status(201).json(position);
 });
 
+contactsRouter.delete("/position-history/:id", async (req, res) => {
+  const position = await contacts.removePositionHistory(req.params.id);
+  if (!position) {
+    res.status(404).json({ error: "Position history entry not found" });
+    return;
+  }
+  res.json(position);
+});
+
 contactsRouter.get("/contacts/:id/connections", async (req, res) => {
   const connections = await contactConnections.findForContact(req.params.id);
   res.json(connections);
@@ -65,6 +74,15 @@ export const contactConnectionsRouter = Router();
 contactConnectionsRouter.post("/contact-connections", async (req, res) => {
   const connection = await contactConnections.create(req.body);
   res.status(201).json(connection);
+});
+
+contactConnectionsRouter.delete("/contact-connections/:id", async (req, res) => {
+  const connection = await contactConnections.remove(req.params.id);
+  if (!connection) {
+    res.status(404).json({ error: "Connection not found" });
+    return;
+  }
+  res.json(connection);
 });
 
 export const firmColleaguesRouter = Router();

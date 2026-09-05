@@ -31,3 +31,12 @@ relationshipsRouter.get("/drifting-relationships", async (req, res) => {
   const drifting = await relationships.findDrifting(multiplier);
   res.json(drifting);
 });
+
+relationshipsRouter.delete("/relationships/:id", async (req, res) => {
+  const relationship = await relationships.remove(req.params.id);
+  if (!relationship) {
+    res.status(404).json({ error: "Relationship not found" });
+    return;
+  }
+  res.json(relationship);
+});

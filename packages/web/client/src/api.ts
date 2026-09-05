@@ -48,12 +48,14 @@ export const api = {
     remove: (id: string) => request(`/contacts/${id}`, { method: "DELETE" }),
     addPositionHistory: (id: string, data: any) =>
       request(`/contacts/${id}/position-history`, { method: "POST", body: JSON.stringify(data) }),
+    removePositionHistory: (id: string) => request(`/position-history/${id}`, { method: "DELETE" }),
     connections: (id: string) => request(`/contacts/${id}/connections`),
     warmIntro: (id: string) => request(`/contacts/${id}/warm-intro`),
   },
 
   contactConnections: {
     create: (data: any) => request("/contact-connections", { method: "POST", body: JSON.stringify(data) }),
+    remove: (id: string) => request(`/contact-connections/${id}`, { method: "DELETE" }),
   },
 
   firmColleagues: {
@@ -67,11 +69,13 @@ export const api = {
       request(`/relationships/${id}/strength`, { method: "PATCH", body: JSON.stringify({ strength_score }) }),
     updateTemperature: (id: string, temperature: string) =>
       request(`/relationships/${id}/temperature`, { method: "PATCH", body: JSON.stringify({ temperature }) }),
+    remove: (id: string) => request(`/relationships/${id}`, { method: "DELETE" }),
   },
 
   interactions: {
     create: (data: any) => request("/interactions", { method: "POST", body: JSON.stringify(data) }),
     forRelationship: (id: string) => request(`/relationships/${id}/interactions`),
+    remove: (id: string) => request(`/interactions/${id}`, { method: "DELETE" }),
   },
 
   opportunities: {

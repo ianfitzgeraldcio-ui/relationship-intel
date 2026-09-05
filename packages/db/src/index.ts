@@ -150,6 +150,10 @@ export const contacts = {
     );
     return rows[0];
   },
+  async removePositionHistory(id: string) {
+    const { rows } = await pool.query(`DELETE FROM contact_position_history WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] ?? null;
+  },
   async getProfile(contactId: string) {
     const { rows: contactRows } = await pool.query(
       `SELECT c.*, o.name AS organization_name
@@ -244,6 +248,21 @@ export const relationships = {
     const { rows } = await pool.query(`SELECT * FROM relationships WHERE id = $1`, [id]);
     return rows[0] ?? null;
   },
+  async remove(id: string) {
+    const client = await pool.connect();
+    try {
+      await client.query("BEGIN");
+      await client.query(`DELETE FROM interactions WHERE relationship_id = $1`, [id]);
+      const { rows } = await client.query(`DELETE FROM relationships WHERE id = $1 RETURNING *`, [id]);
+      await client.query("COMMIT");
+      return rows[0] ?? null;
+    } catch (err) {
+      await client.query("ROLLBACK");
+      throw err;
+    } finally {
+      client.release();
+    }
+  },
   async getMapForOrg(organizationId: string) {
     const { rows } = await pool.query(
       `SELECT
@@ -303,6 +322,10 @@ export const interactions = {
     const { rows } = await pool.query(`SELECT * FROM interactions WHERE relationship_id = $1 ORDER BY date DESC`, [relationshipId]);
     return rows;
   },
+  async remove(id: string) {
+    const { rows } = await pool.query(`DELETE FROM interactions WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] ?? null;
+  },
   async findRecent(filters: { relationship_id?: string; contact_id?: string; days?: number; limit?: number } = {}) {
     const days = filters.days ?? 90;
     const limit = filters.limit ?? 20;
@@ -342,6 +365,10 @@ export const contactConnections = {
       [contactId]
     );
     return rows;
+  },
+  async remove(id: string) {
+    const { rows } = await pool.query(`DELETE FROM contact_connections WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] ?? null;
   },
   // Which of the contacts I already have a relationship with are
   // connected to this target contact, and how willing they'd be to refer me.

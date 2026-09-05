@@ -13,6 +13,15 @@ interactionsRouter.get("/relationships/:id/interactions", async (req, res) => {
   res.json(results);
 });
 
+interactionsRouter.delete("/interactions/:id", async (req, res) => {
+  const interaction = await interactions.remove(req.params.id);
+  if (!interaction) {
+    res.status(404).json({ error: "Interaction not found" });
+    return;
+  }
+  res.json(interaction);
+});
+
 interactionsRouter.get("/interactions/recent", async (req, res) => {
   const { relationship_id, contact_id, days, limit } = req.query;
   const results = await interactions.findRecent({

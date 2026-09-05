@@ -327,6 +327,21 @@ button {
   text-decoration: none;
 }
 
+.linkedin-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 6px;
+  background: #0a66c2;
+  color: #fff;
+}
+
+.linkedin-badge:hover {
+  background: #004182;
+}
+
 .data-table a:hover {
   text-decoration: underline;
 }

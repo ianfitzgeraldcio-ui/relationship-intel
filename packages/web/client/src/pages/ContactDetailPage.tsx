@@ -71,6 +71,30 @@ export default function ContactDetailPage() {
     load();
   }
 
+  async function handleDeleteRelationship(relationshipId: string, firmColleagueName: string) {
+    if (!confirm(`Remove the relationship with ${firmColleagueName}? Any logged interactions on it go too.`)) return;
+    await api.relationships.remove(relationshipId);
+    load();
+  }
+
+  async function handleDeleteInteraction(interactionId: string) {
+    if (!confirm("Delete this interaction?")) return;
+    await api.interactions.remove(interactionId);
+    load();
+  }
+
+  async function handleDeletePosition(positionId: string) {
+    if (!confirm("Delete this position history entry?")) return;
+    await api.contacts.removePositionHistory(positionId);
+    load();
+  }
+
+  async function handleDeleteConnection(connectionId: string, otherName: string) {
+    if (!confirm(`Remove the known connection to ${otherName}?`)) return;
+    await api.contactConnections.remove(connectionId);
+    load();
+  }
+
   if (error) return <p className="error-banner">{error}</p>;
   if (!profile) return <p className="muted">Loading…</p>;
 
@@ -118,6 +142,24 @@ export default function ContactDetailPage() {
           <span className="field-label">Phone</span>
           <span>{contact.phone ?? "—"}</span>
         </div>
+        <div>
+          <span className="field-label">LinkedIn</span>
+          {contact.linkedin ? (
+            <a
+              href={contact.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="linkedin-badge"
+              title="Open LinkedIn profile"
+            >
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor" aria-hidden="true">
+                <path d="M20.45 20.45h-3.55v-5.57c0-1.33-.02-3.03-1.85-3.03-1.86 0-2.14 1.45-2.14 2.94v5.66H9.36V9h3.41v1.56h.05c.48-.9 1.64-1.85 3.38-1.85 3.61 0 4.28 2.38 4.28 5.47v6.27zM5.34 7.43a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12zM7.12 20.45H3.56V9h3.56v11.45z" />
+              </svg>
+            </a>
+          ) : (
+            <span>—</span>
+          )}
+        </div>
       </div>
 
       <section>
@@ -138,6 +180,7 @@ export default function ContactDetailPage() {
                 <th>Strength</th>
                 <th>Effective</th>
                 <th>Temperature</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -168,6 +211,11 @@ export default function ContactDetailPage() {
                       ))}
                     </select>
                   </td>
+                  <td>
+                    <button className="link-button" onClick={() => handleDeleteRelationship(r.id, r.firm_colleague_name)}>
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -196,6 +244,7 @@ export default function ContactDetailPage() {
                 <th>Type</th>
                 <th>Summary</th>
                 <th>Sentiment</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -205,6 +254,11 @@ export default function ContactDetailPage() {
                   <td>{i.interaction_type}</td>
                   <td>{i.summary}</td>
                   <td>{i.sentiment ?? "—"}</td>
+                  <td>
+                    <button className="link-button" onClick={() => handleDeleteInteraction(i.id)}>
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -229,6 +283,7 @@ export default function ContactDetailPage() {
                 <th>Organization</th>
                 <th>Start</th>
                 <th>End</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -240,6 +295,11 @@ export default function ContactDetailPage() {
                   </td>
                   <td>{p.start_date ? new Date(p.start_date).toLocaleDateString() : "—"}</td>
                   <td>{p.end_date ? new Date(p.end_date).toLocaleDateString() : "—"}</td>
+                  <td>
+                    <button className="link-button" onClick={() => handleDeletePosition(p.id)}>
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
@@ -263,6 +323,7 @@ export default function ContactDetailPage() {
                 <th>Contact</th>
                 <th>Connection type</th>
                 <th>Referral willingness</th>
+                <th></th>
               </tr>
             </thead>
             <tbody>
@@ -273,6 +334,11 @@ export default function ContactDetailPage() {
                   </td>
                   <td>{c.connection_type}</td>
                   <td>{c.referral_willingness ?? "—"}</td>
+                  <td>
+                    <button className="link-button" onClick={() => handleDeleteConnection(c.id, c.other_contact_name)}>
+                      Delete
+                    </button>
+                  </td>
                 </tr>
               ))}
             </tbody>
