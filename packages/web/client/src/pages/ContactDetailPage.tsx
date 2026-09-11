@@ -23,6 +23,7 @@ export default function ContactDetailPage() {
   const [activeModal, setActiveModal] = useState<
     "edit" | "position" | "relationship" | "interaction" | "connection" | null
   >(null);
+  const [selectedInteraction, setSelectedInteraction] = useState<any>(null);
 
   async function load() {
     if (!id) return;
@@ -81,6 +82,7 @@ export default function ContactDetailPage() {
   async function handleDeleteInteraction(interactionId: string) {
     if (!confirm("Delete this interaction?")) return;
     await api.interactions.remove(interactionId);
+    setSelectedInteraction(null);
     load();
   }
 
@@ -250,13 +252,19 @@ export default function ContactDetailPage() {
             </thead>
             <tbody>
               {recent_interactions.map((i: any) => (
-                <tr key={i.id}>
+                <tr key={i.id} className="clickable-row" onClick={() => setSelectedInteraction(i)}>
                   <td>{formatDate(i.date)}</td>
                   <td>{i.interaction_type}</td>
-                  <td>{i.summary}</td>
+                  <td className="truncate-cell">{i.summary}</td>
                   <td>{i.sentiment ?? "—"}</td>
                   <td>
-                    <button className="link-button" onClick={() => handleDeleteInteraction(i.id)}>
+                    <button
+                      className="link-button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleDeleteInteraction(i.id);
+                      }}
+                    >
                       Delete
                     </button>
                   </td>
@@ -390,6 +398,48 @@ export default function ContactDetailPage() {
           />
         </Modal>
       )}
+      {selectedInteraction && (
+        <Modal
+          title={`${selectedInteraction.interaction_type} · ${formatDate(selectedInteraction.date)}`}
+          onClose={() => setSelectedInteraction(null)}
+        >
+          <div className="interaction-detail">
+            <div className="detail-grid">
+              <div>
+                <span className="field-label">With</span>
+                <span>{selectedInteraction.firm_colleague_name ?? "—"}</span>
+              </div>
+              <div>
+                <span className="field-label">Sentiment</span>
+                <span>{selectedInteraction.sentiment ?? "—"}</span>
+              </div>
+              <div>
+                <span className="field-label">Source</span>
+                <span>{selectedInteraction.source}</span>
+              </div>
+            </div>
+            <div>
+              <span className="field-label">Summary</span>
+              <p className="interaction-detail-text">{selectedInteraction.summary}</p>
+            </div>
+            {selectedInteraction.notes && (
+              <div>
+                <span className="field-label">Notes</span>
+                <p className="interaction-detail-text">{selectedInteraction.notes}</p>
+              </div>
+            )}
+          </div>
+          <div className="form-actions">
+            <button className="secondary-button" onClick={() => setSelectedInteraction(null)}>
+              Close
+            </button>
+            <button className="danger-button" onClick={() => handleDeleteInteraction(selectedInteraction.id)}>
+              Delete
+            </button>
+          </div>
+        </Modal>
+      )}
+
       {activeModal === "connection" && id && (
         <Modal title="Add known connection" onClose={() => setActiveModal(null)}>
           <ConnectionForm

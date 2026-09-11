@@ -181,8 +181,10 @@ export const contacts = {
         [contactId]
       ),
       pool.query(
-        `SELECT i.* FROM interactions i
+        `SELECT i.*, fc.name AS firm_colleague_name
+         FROM interactions i
          JOIN relationships r ON r.id = i.relationship_id
+         JOIN firm_colleagues fc ON fc.id = r.firm_colleague_id
          WHERE r.contact_id = $1
          ORDER BY i.date DESC
          LIMIT 20`,
