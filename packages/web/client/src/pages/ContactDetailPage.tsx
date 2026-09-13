@@ -5,6 +5,8 @@ import { api } from "../api";
 import Modal from "../components/Modal";
 import ContactForm from "../components/ContactForm";
 import type { ContactFormValues } from "../components/ContactForm";
+import ContactSearchInput from "../components/ContactSearchInput";
+import type { ContactOption } from "../components/ContactSearchInput";
 import { formatDate, todayInPacific } from "../timezone";
 
 const TEMPERATURES = ["cold", "cool", "warm", "hot"];
@@ -691,17 +693,21 @@ function ConnectionForm({
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [otherContactId, setOtherContactId] = useState("");
+  const [otherContact, setOtherContact] = useState<ContactOption | null>(null);
   const [connectionType, setConnectionType] = useState("colleague");
   const [referralWillingness, setReferralWillingness] = useState("unknown");
   const [error, setError] = useState<string | null>(null);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!otherContact) {
+      setError("Search for and select a contact first.");
+      return;
+    }
     try {
       await api.contactConnections.create({
         contact_id_a: contactId,
-        contact_id_b: otherContactId,
+        contact_id_b: otherContact.id,
         connection_type: connectionType,
         referral_willingness: referralWillingness,
       });
@@ -714,12 +720,12 @@ function ConnectionForm({
   return (
     <form className="entity-form" onSubmit={handleSubmit}>
       <label>
-        Other contact ID
-        <input
-          value={otherContactId}
-          onChange={(e) => setOtherContactId(e.target.value)}
-          placeholder="contact_..."
-          required
+        Other contact
+        <ContactSearchInput
+          selected={otherContact}
+          onSelect={setOtherContact}
+          onClear={() => setOtherContact(null)}
+          excludeId={contactId}
         />
       </label>
       <label>

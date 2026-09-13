@@ -425,6 +425,59 @@ button {
   font-family: inherit;
 }
 
+.contact-search {
+  position: relative;
+}
+
+.contact-search-results {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 0;
+  right: 0;
+  z-index: 20;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(22, 32, 28, 0.12);
+  max-height: 220px;
+  overflow-y: auto;
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+}
+
+.contact-search-results li {
+  padding: 8px 10px;
+  border-radius: 6px;
+  font-size: 13.5px;
+  cursor: pointer;
+}
+
+.contact-search-results li:hover {
+  background: var(--surface-2);
+}
+
+.contact-search-empty {
+  cursor: default !important;
+  color: var(--muted);
+}
+
+.contact-search-empty:hover {
+  background: transparent !important;
+}
+
+.contact-search-selected {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 14px;
+  background: var(--surface-2);
+}
+
 .checkbox-label {
   flex-direction: row !important;
   align-items: center;
