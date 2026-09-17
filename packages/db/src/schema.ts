@@ -6,9 +6,9 @@ export const SCHEMA_SQL = `
 CREATE TABLE IF NOT EXISTS organizations (
   id TEXT PRIMARY KEY,
   name TEXT NOT NULL,
-  org_type TEXT NOT NULL CHECK (org_type IN ('utility', 'regulator', 'rto_iso', 'firm', 'muni', 'other')),
+  org_type TEXT NOT NULL CHECK (org_type IN ('utility', 'regulator', 'rto_iso', 'firm', 'muni', 'consultant', 'vendor', 'other')),
   ownership_category TEXT CHECK (ownership_category IN ('IOU', 'Cooperative', 'Municipal', 'PUD', 'Crown Corp')),
-  sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi')),
+  sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi', 'telecom', 'software')),
   state TEXT,
   meter_count INTEGER,
   annual_revenue BIGINT,
@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS organizations (
 
 -- Added after the initial deploy - IF NOT EXISTS makes each safe to
 -- re-run against a database that was already created without them.
-ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi'));
+ALTER TABLE organizations ADD COLUMN IF NOT EXISTS sector TEXT CHECK (sector IN ('electric', 'gas', 'water', 'multi', 'telecom', 'software'));
 ALTER TABLE organizations ADD COLUMN IF NOT EXISTS annual_revenue BIGINT;
 
 -- Widen the ownership_category check constraint to allow 'Crown Corp'
@@ -32,10 +32,18 @@ ALTER TABLE organizations ADD CONSTRAINT organizations_ownership_category_check
   CHECK (ownership_category IN ('IOU', 'Cooperative', 'Municipal', 'PUD', 'Crown Corp'));
 
 -- Widen org_type to allow 'muni' (city/county government contacts that
--- aren't themselves a utility). Same safe-to-rerun drop/recreate pattern.
+-- aren't themselves a utility), then 'consultant' and 'vendor' (splitting
+-- out the generic 'firm' bucket for consulting firms vs. product/service
+-- vendors). Same safe-to-rerun drop/recreate pattern.
 ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_org_type_check;
 ALTER TABLE organizations ADD CONSTRAINT organizations_org_type_check
-  CHECK (org_type IN ('utility', 'regulator', 'rto_iso', 'firm', 'muni', 'other'));
+  CHECK (org_type IN ('utility', 'regulator', 'rto_iso', 'firm', 'muni', 'consultant', 'vendor', 'other'));
+
+-- Widen sector to allow 'telecom' and 'software', for organizations that
+-- aren't utilities at all but where sector is still a useful filter.
+ALTER TABLE organizations DROP CONSTRAINT IF EXISTS organizations_sector_check;
+ALTER TABLE organizations ADD CONSTRAINT organizations_sector_check
+  CHECK (sector IN ('electric', 'gas', 'water', 'multi', 'telecom', 'software'));
 
 CREATE TABLE IF NOT EXISTS contacts (
   id TEXT PRIMARY KEY,

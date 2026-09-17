@@ -8,15 +8,16 @@ function result(data: unknown) {
 // Postgres error code for a foreign-key violation.
 const FOREIGN_KEY_VIOLATION = "23503";
 
-const sector = z.enum(["electric", "gas", "water", "multi"]);
+const sector = z.enum(["electric", "gas", "water", "multi", "telecom", "software"]);
+const orgType = z.enum(["utility", "regulator", "rto_iso", "firm", "muni", "consultant", "vendor", "other"]);
 
 export const createOrganization = {
-  description: "Create a new organization (utility, regulator, RTO/ISO, firm, municipality, or other).",
+  description: "Create a new organization (utility, regulator, RTO/ISO, firm, municipality, consultant, vendor, or other).",
   inputSchema: {
     name: z.string().describe("Organization name"),
-    org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "muni", "other"]).describe("Type of organization"),
+    org_type: orgType.describe("Type of organization"),
     ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"]).optional().describe("Ownership category for utilities"),
-    sector: sector.optional().describe("Utility sector: electric, gas, water, or multi (serves more than one)"),
+    sector: sector.optional().describe("Utility sector: electric, gas, water, multi (serves more than one), telecom, or software"),
     state: z.string().optional().describe("State"),
     meter_count: z.number().optional().describe("Meter count for utilities"),
     annual_revenue: z.number().optional().describe("Annual revenue in USD"),
@@ -34,9 +35,9 @@ export const updateOrganization = {
   inputSchema: {
     id: z.string().describe("Organization ID"),
     name: z.string().optional().describe("Organization name"),
-    org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "muni", "other"]).optional().describe("Type of organization"),
+    org_type: orgType.optional().describe("Type of organization"),
     ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"]).optional().describe("Ownership category"),
-    sector: sector.optional().describe("Utility sector: electric, gas, water, or multi"),
+    sector: sector.optional().describe("Utility sector: electric, gas, water, multi, telecom, or software"),
     state: z.string().optional().describe("State"),
     meter_count: z.number().optional().describe("Meter count"),
     annual_revenue: z.number().optional().describe("Annual revenue in USD"),
