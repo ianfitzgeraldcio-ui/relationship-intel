@@ -11,10 +11,10 @@ const FOREIGN_KEY_VIOLATION = "23503";
 const sector = z.enum(["electric", "gas", "water", "multi"]);
 
 export const createOrganization = {
-  description: "Create a new organization (utility, regulator, RTO/ISO, firm, or other).",
+  description: "Create a new organization (utility, regulator, RTO/ISO, firm, municipality, or other).",
   inputSchema: {
     name: z.string().describe("Organization name"),
-    org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "other"]).describe("Type of organization"),
+    org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "muni", "other"]).describe("Type of organization"),
     ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"]).optional().describe("Ownership category for utilities"),
     sector: sector.optional().describe("Utility sector: electric, gas, water, or multi (serves more than one)"),
     state: z.string().optional().describe("State"),
@@ -34,7 +34,7 @@ export const updateOrganization = {
   inputSchema: {
     id: z.string().describe("Organization ID"),
     name: z.string().optional().describe("Organization name"),
-    org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "other"]).optional().describe("Type of organization"),
+    org_type: z.enum(["utility", "regulator", "rto_iso", "firm", "muni", "other"]).optional().describe("Type of organization"),
     ownership_category: z.enum(["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"]).optional().describe("Ownership category"),
     sector: sector.optional().describe("Utility sector: electric, gas, water, or multi"),
     state: z.string().optional().describe("State"),

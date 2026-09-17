@@ -13,7 +13,7 @@ export interface OrganizationFormValues {
   notes?: string;
 }
 
-const ORG_TYPES = ["utility", "regulator", "rto_iso", "firm", "other"];
+const ORG_TYPES = ["utility", "regulator", "rto_iso", "firm", "muni", "other"];
 const OWNERSHIP_CATEGORIES = ["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"];
 const SECTORS = ["electric", "gas", "water", "multi"];
 
