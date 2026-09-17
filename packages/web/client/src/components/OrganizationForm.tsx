@@ -14,7 +14,7 @@ export interface OrganizationFormValues {
 }
 
 const ORG_TYPES = ["utility", "regulator", "rto_iso", "firm", "muni", "consultant", "vendor", "other"];
-const OWNERSHIP_CATEGORIES = ["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp"];
+const OWNERSHIP_CATEGORIES = ["IOU", "Cooperative", "Municipal", "PUD", "Crown Corp", "Private", "Public"];
 const SECTORS = ["electric", "gas", "water", "multi", "telecom", "software"];
 
 export default function OrganizationForm({
