@@ -56,6 +56,10 @@ export const organizations = {
     const { rows } = await pool.query(`SELECT * FROM organizations WHERE id = $1`, [id]);
     return rows[0] ?? null;
   },
+  async findByName(name: string) {
+    const { rows } = await pool.query(`SELECT * FROM organizations WHERE lower(name) = lower($1)`, [name.trim()]);
+    return rows;
+  },
   async search(query: string, filters: { state?: string; org_type?: string; sector?: string; min_revenue?: number } = {}) {
     const { rows } = await pool.query(
       `SELECT * FROM organizations
@@ -478,6 +482,108 @@ export const opportunities = {
       ),
     ]);
     return { forecast_by_period: pipeline.rows, closed_won: won.rows[0] };
+  },
+};
+
+export interface SignalInput {
+  organization_id: string;
+  signal_date: string;
+  category: string;
+  score: number;
+  summary: string;
+  source_url?: string;
+  briefing_date?: string;
+}
+
+// Retention is tiered by score: low-value noise ages out fast, while
+// high-score signals (open RFPs, leadership changes, rate cases) stay
+// useful for a full budget/procurement cycle. Pinned rows never expire.
+export const SIGNAL_RETENTION_DAYS = { lowScore: 90, midScore: 365, highScore: 730 };
+
+const SIGNAL_UPDATABLE = ["signal_date", "category", "score", "summary", "source_url", "pinned"] as const;
+
+export const signals = {
+  // Idempotent on (organization_id, source_url): re-posting an article that's
+  // already stored returns the existing row with created=false.
+  async create(input: SignalInput) {
+    const id = genId("signal");
+    const { rows } = await pool.query(
+      `INSERT INTO signals (id, organization_id, signal_date, category, score, summary, source_url, briefing_date)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, COALESCE($8::date, CURRENT_DATE))
+       ON CONFLICT (organization_id, source_url) WHERE source_url IS NOT NULL DO NOTHING
+       RETURNING *`,
+      [id, input.organization_id, input.signal_date, input.category, input.score, input.summary, input.source_url ?? null, input.briefing_date ?? null]
+    );
+    if (rows[0]) return { signal: rows[0], created: true };
+    const existing = await pool.query(`SELECT * FROM signals WHERE organization_id = $1 AND source_url = $2`, [
+      input.organization_id,
+      input.source_url,
+    ]);
+    return { signal: existing.rows[0], created: false };
+  },
+  async search(
+    filters: {
+      organization_id?: string;
+      query?: string;
+      category?: string;
+      min_score?: number;
+      since?: string;
+      briefing_date?: string;
+      limit?: number;
+    } = {}
+  ) {
+    const limit = Math.min(Math.max(filters.limit ?? 100, 1), 500);
+    const { rows } = await pool.query(
+      `SELECT s.*, o.name AS organization_name
+       FROM signals s
+       JOIN organizations o ON o.id = s.organization_id
+       WHERE ($1::text IS NULL OR s.organization_id = $1)
+         AND ($2::text IS NULL OR o.name ILIKE $2 OR s.summary ILIKE $2)
+         AND ($3::text IS NULL OR s.category = $3)
+         AND ($4::int IS NULL OR s.score >= $4)
+         AND ($5::date IS NULL OR s.signal_date >= $5)
+         AND ($6::date IS NULL OR s.briefing_date = $6)
+       ORDER BY s.signal_date DESC, s.score DESC, s.created_at DESC
+       LIMIT $7`,
+      [
+        filters.organization_id ?? null,
+        filters.query ? `%${filters.query}%` : null,
+        filters.category ?? null,
+        filters.min_score ?? null,
+        filters.since ?? null,
+        filters.briefing_date ?? null,
+        limit,
+      ]
+    );
+    return rows;
+  },
+  async update(id: string, updates: Record<string, unknown>) {
+    const allowed: Record<string, unknown> = {};
+    for (const key of SIGNAL_UPDATABLE) allowed[key] = updates[key];
+    const { setClause, values } = buildSetClause(allowed, 2);
+    if (!setClause) {
+      const { rows } = await pool.query(`SELECT * FROM signals WHERE id = $1`, [id]);
+      return rows[0] ?? null;
+    }
+    const { rows } = await pool.query(`UPDATE signals SET ${setClause} WHERE id = $1 RETURNING *`, [id, ...values]);
+    return rows[0] ?? null;
+  },
+  async remove(id: string) {
+    const { rows } = await pool.query(`DELETE FROM signals WHERE id = $1 RETURNING *`, [id]);
+    return rows[0] ?? null;
+  },
+  async purgeExpired() {
+    const { lowScore, midScore, highScore } = SIGNAL_RETENTION_DAYS;
+    const { rowCount } = await pool.query(
+      `DELETE FROM signals
+       WHERE pinned = false AND (
+         (score <= 2 AND signal_date < CURRENT_DATE - $1::int) OR
+         (score = 3 AND signal_date < CURRENT_DATE - $2::int) OR
+         (score >= 4 AND signal_date < CURRENT_DATE - $3::int)
+       )`,
+      [lowScore, midScore, highScore]
+    );
+    return rowCount ?? 0;
   },
 };
 

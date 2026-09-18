@@ -87,4 +87,11 @@ export const api = {
       request(`/opportunities/${id}/contacts`, { method: "POST", body: JSON.stringify(data) }),
     revenueForecast: (groupBy: "month" | "quarter" = "month") => request(`/revenue-forecast?group_by=${groupBy}`),
   },
+
+  signals: {
+    list: (params: { query?: string; organization_id?: string; category?: string; min_score?: number; since?: string; limit?: number } = {}) =>
+      request(`/signals${qs(params)}`),
+    update: (id: string, data: any) => request(`/signals/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+    remove: (id: string) => request(`/signals/${id}`, { method: "DELETE" }),
+  },
 };

@@ -140,4 +140,27 @@ CREATE TABLE IF NOT EXISTS opportunity_contacts (
   contact_role TEXT CHECK (contact_role IN ('champion', 'economic_buyer', 'technical_evaluator', 'influencer', 'blocker', 'other')),
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
+
+-- Running history of market/news signals per organization, posted by the
+-- scheduled briefing task. Derivative data, so it cascades with the org.
+-- score: 1 = background/FYI ... 5 = act now. signal_date is when the event
+-- happened; briefing_date is which briefing surfaced it. Rows are purged on
+-- a score-tiered schedule (see signals.purgeExpired) unless pinned.
+CREATE TABLE IF NOT EXISTS signals (
+  id TEXT PRIMARY KEY,
+  organization_id TEXT NOT NULL REFERENCES organizations(id) ON DELETE CASCADE,
+  signal_date DATE NOT NULL,
+  category TEXT NOT NULL CHECK (category IN ('rfp_procurement', 'capital_project', 'regulatory', 'leadership_change', 'technology', 'financial', 'merger_acquisition', 'competitor', 'other')),
+  score INTEGER NOT NULL CHECK (score BETWEEN 1 AND 5),
+  summary TEXT NOT NULL,
+  source_url TEXT,
+  briefing_date DATE NOT NULL DEFAULT CURRENT_DATE,
+  pinned BOOLEAN NOT NULL DEFAULT false,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS signals_org_date_idx ON signals (organization_id, signal_date DESC);
+CREATE INDEX IF NOT EXISTS signals_date_idx ON signals (signal_date DESC);
+-- Re-posting the same article for the same org is a no-op, so the scheduled
+-- task can safely overlap its lookback windows.
+CREATE UNIQUE INDEX IF NOT EXISTS signals_org_source_url_uniq ON signals (organization_id, source_url) WHERE source_url IS NOT NULL;
 `;

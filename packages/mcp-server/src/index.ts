@@ -1,6 +1,6 @@
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import { runMigrations } from "../../db/src/index.js";
+import { runMigrations, signals } from "../../db/src/index.js";
 import { createServer } from "./server.js";
 import { isAuthorized } from "./auth.js";
 import { tools } from "./tools/index.js";
@@ -15,6 +15,19 @@ async function main() {
     console.error("Failed to run database migrations:", err);
     process.exit(1);
   }
+
+  // Expire old signals once at boot and then daily. Failures are logged but
+  // never fatal - a missed purge just retries on the next tick.
+  const purgeSignals = async () => {
+    try {
+      const removed = await signals.purgeExpired();
+      if (removed > 0) console.log(`Purged ${removed} expired signal(s)`);
+    } catch (err) {
+      console.error("Signal purge failed:", err);
+    }
+  };
+  await purgeSignals();
+  setInterval(purgeSignals, 24 * 60 * 60 * 1000).unref();
 
   const app = express();
   app.use(express.json());

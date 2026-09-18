@@ -6,6 +6,8 @@ import OrganizationForm from "../components/OrganizationForm";
 import type { OrganizationFormValues } from "../components/OrganizationForm";
 import OpportunityForm from "../components/OpportunityForm";
 import type { OpportunityFormValues } from "../components/OpportunityForm";
+import SignalsTable from "../components/SignalsTable";
+import type { Signal } from "../components/SignalsTable";
 
 export default function OrganizationDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -13,6 +15,7 @@ export default function OrganizationDetailPage() {
   const [org, setOrg] = useState<any>(null);
   const [contacts, setContacts] = useState<any[]>([]);
   const [relationships, setRelationships] = useState<any[]>([]);
+  const [signals, setSignals] = useState<Signal[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [showEdit, setShowEdit] = useState(false);
   const [showNewOpportunity, setShowNewOpportunity] = useState(false);
@@ -20,14 +23,16 @@ export default function OrganizationDetailPage() {
   async function load() {
     if (!id) return;
     try {
-      const [orgData, contactsData, relationshipsData] = await Promise.all([
+      const [orgData, contactsData, relationshipsData, signalsData] = await Promise.all([
         api.organizations.get(id),
         api.contacts.list({ organization_id: id }),
         api.organizations.relationships(id),
+        api.signals.list({ organization_id: id, limit: 25 }),
       ]);
       setOrg(orgData);
       setContacts(contactsData);
       setRelationships(relationshipsData);
+      setSignals(signalsData);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load");
     }
@@ -162,6 +167,15 @@ export default function OrganizationDetailPage() {
               ))}
             </tbody>
           </table>
+        )}
+      </section>
+
+      <section>
+        <h3>Recent signals</h3>
+        {signals.length === 0 ? (
+          <p className="muted">No signals recorded yet.</p>
+        ) : (
+          <SignalsTable signals={signals} showOrganization={false} onChanged={load} />
         )}
       </section>
 

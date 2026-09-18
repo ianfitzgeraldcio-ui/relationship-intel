@@ -18,6 +18,7 @@ export default function NavBar({ onLogout }: { onLogout: () => void }) {
           <NavLink to="/organizations">Organizations</NavLink>
           <NavLink to="/contacts">Contacts</NavLink>
           <NavLink to="/opportunities">Opportunities</NavLink>
+          <NavLink to="/signals">Signals</NavLink>
         </nav>
       </div>
       <button className="link-button" onClick={handleLogout}>

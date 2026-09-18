@@ -574,3 +574,69 @@ button {
   font-family: "IBM Plex Mono", monospace;
   font-size: 12px;
 }
+
+/* ---------- signals ---------- */
+.filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filter-row select {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface);
+  font-family: inherit;
+  font-size: 14px;
+}
+
+.score-badge {
+  display: inline-block;
+  min-width: 26px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  text-align: center;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.score-1,
+.score-2 {
+  background: var(--surface-2);
+  color: var(--ink-soft);
+}
+
+.score-3 {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.score-4 {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+.score-5 {
+  background: var(--warn);
+  color: #ffffff;
+}
+
+.signal-summary {
+  min-width: 280px;
+}
+
+.signal-actions {
+  white-space: nowrap;
+}
+
+.signal-actions .link-button + .link-button {
+  margin-left: 10px;
+}
+
+.signal-footnote {
+  margin-top: 16px;
+  font-size: 13px;
+}

@@ -5,6 +5,7 @@ import { logInteraction, listRecentInteractions } from "./interactions.js";
 import { createContactConnection, searchContactConnections, findWarmIntroPath } from "./connections.js";
 import { createOpportunity, updateOpportunity, deleteOpportunity, addOpportunityContact, searchOpportunities, getRevenueForecast } from "./opportunities.js";
 import { getRelationshipHealthSummary, getOrganizationSummary } from "./reports.js";
+import { createSignals, searchSignals, updateSignal, deleteSignal } from "./signals.js";
 
 export const tools = {
   create_organization: createOrganization,
@@ -36,4 +37,8 @@ export const tools = {
   get_revenue_forecast: getRevenueForecast,
   get_relationship_health_summary: getRelationshipHealthSummary,
   get_organization_summary: getOrganizationSummary,
+  create_signals: createSignals,
+  search_signals: searchSignals,
+  update_signal: updateSignal,
+  delete_signal: deleteSignal,
 };

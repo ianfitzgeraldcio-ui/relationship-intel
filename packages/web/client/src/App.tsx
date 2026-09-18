@@ -9,6 +9,7 @@ import OrganizationDetailPage from "./pages/OrganizationDetailPage";
 import ContactsListPage from "./pages/ContactsListPage";
 import ContactDetailPage from "./pages/ContactDetailPage";
 import OpportunitiesBoardPage from "./pages/OpportunitiesBoardPage";
+import SignalsPage from "./pages/SignalsPage";
 
 export default function App() {
   const [authenticated, setAuthenticated] = useState<boolean | null>(null);
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="contacts" element={<ContactsListPage />} />
           <Route path="contacts/:id" element={<ContactDetailPage />} />
           <Route path="opportunities" element={<OpportunitiesBoardPage />} />
+          <Route path="signals" element={<SignalsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
