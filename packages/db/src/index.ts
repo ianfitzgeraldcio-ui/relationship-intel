@@ -15,14 +15,29 @@ function genId(prefix: string): string {
   return `${prefix}_${randomUUID()}`;
 }
 
-// Builds "col1 = $2, col2 = $3" from only the defined keys of `updates`,
-// starting param numbering at `startIndex`. Shared by every repo's update().
-function buildSetClause(updates: Record<string, unknown>, startIndex: number) {
-  const keys = Object.keys(updates).filter((k) => updates[k] !== undefined);
+// Builds "col1 = $2, col2 = $3" from the defined keys of `updates`, starting
+// param numbering at `startIndex`. Column names are interpolated into SQL
+// (only values are parameterized), so only keys in the caller's `allowed`
+// whitelist are ever used - anything else in `updates` (e.g. a crafted key
+// from a web request body) is silently ignored. Shared by every repo's update().
+function buildSetClause(updates: Record<string, unknown>, startIndex: number, allowed: readonly string[]) {
+  const keys = Object.keys(updates).filter((k) => allowed.includes(k) && updates[k] !== undefined);
   const setClause = keys.map((k, i) => `${k} = $${startIndex + i}`).join(", ");
   const values = keys.map((k) => updates[k]);
   return { setClause, values, keys };
 }
+
+const ORGANIZATION_UPDATABLE = [
+  "name", "org_type", "ownership_category", "sector", "state", "meter_count", "annual_revenue", "website", "notes",
+] as const;
+const CONTACT_UPDATABLE = [
+  "name", "title", "organization_id", "role_category", "decision_authority", "email", "phone", "linkedin", "is_current",
+] as const;
+// organization_id is intentionally allowed: the opportunity edit form can move a deal to another org.
+const OPPORTUNITY_UPDATABLE = [
+  "name", "organization_id", "stage", "estimated_value", "probability", "expected_close_date", "actual_close_date", "notes",
+] as const;
+const SIGNAL_UPDATABLE = ["signal_date", "category", "score", "summary", "source_url", "pinned"] as const;
 
 export interface OrganizationInput {
   name: string;
@@ -47,7 +62,7 @@ export const organizations = {
     return rows[0];
   },
   async update(id: string, updates: Partial<OrganizationInput>) {
-    const { setClause, values } = buildSetClause(updates, 2);
+    const { setClause, values } = buildSetClause(updates, 2, ORGANIZATION_UPDATABLE);
     if (!setClause) return organizations.findById(id);
     const { rows } = await pool.query(`UPDATE organizations SET ${setClause} WHERE id = $1 RETURNING *`, [id, ...values]);
     return rows[0] ?? null;
@@ -102,7 +117,7 @@ export const contacts = {
     return rows[0];
   },
   async update(id: string, updates: Partial<ContactInput>) {
-    const { setClause, values } = buildSetClause(updates, 2);
+    const { setClause, values } = buildSetClause(updates, 2, CONTACT_UPDATABLE);
     if (!setClause) return contacts.findById(id);
     const { rows } = await pool.query(`UPDATE contacts SET ${setClause} WHERE id = $1 RETURNING *`, [id, ...values]);
     return rows[0] ?? null;
@@ -418,8 +433,8 @@ export const opportunities = {
     );
     return rows[0];
   },
-  async update(id: string, updates: Partial<{ name: string; stage: string; estimated_value: number; probability: number; expected_close_date: string; actual_close_date: string; notes: string }>) {
-    const { setClause, values } = buildSetClause(updates, 2);
+  async update(id: string, updates: Partial<{ name: string; organization_id: string; stage: string; estimated_value: number; probability: number; expected_close_date: string; actual_close_date: string; notes: string }>) {
+    const { setClause, values } = buildSetClause(updates, 2, OPPORTUNITY_UPDATABLE);
     if (!setClause) return opportunities.findById(id);
     const { rows } = await pool.query(`UPDATE opportunities SET ${setClause} WHERE id = $1 RETURNING *`, [id, ...values]);
     return rows[0] ?? null;
@@ -500,8 +515,6 @@ export interface SignalInput {
 // useful for a full budget/procurement cycle. Pinned rows never expire.
 export const SIGNAL_RETENTION_DAYS = { lowScore: 90, midScore: 365, highScore: 730 };
 
-const SIGNAL_UPDATABLE = ["signal_date", "category", "score", "summary", "source_url", "pinned"] as const;
-
 export const signals = {
   // Idempotent on (organization_id, source_url): re-posting an article that's
   // already stored returns the existing row with created=false.
@@ -558,9 +571,7 @@ export const signals = {
     return rows;
   },
   async update(id: string, updates: Record<string, unknown>) {
-    const allowed: Record<string, unknown> = {};
-    for (const key of SIGNAL_UPDATABLE) allowed[key] = updates[key];
-    const { setClause, values } = buildSetClause(allowed, 2);
+    const { setClause, values } = buildSetClause(updates, 2, SIGNAL_UPDATABLE);
     if (!setClause) {
       const { rows } = await pool.query(`SELECT * FROM signals WHERE id = $1`, [id]);
       return rows[0] ?? null;
