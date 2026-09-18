@@ -33,6 +33,7 @@ export const updateContact = {
     id: z.string().describe("Contact ID"),
     name: z.string().optional(),
     title: z.string().optional(),
+    organization_id: z.string().optional().describe("Move the contact to a different organization (e.g. after a job change)"),
     role_category: roleCategory.optional(),
     decision_authority: decisionAuthority.optional(),
     email: z.string().optional(),
