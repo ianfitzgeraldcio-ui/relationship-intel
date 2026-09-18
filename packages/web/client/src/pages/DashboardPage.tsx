@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { formatDate } from "../timezone";
 
 interface HealthSummary {
   temperature_distribution: { temperature: string; count: string }[];
@@ -12,6 +13,8 @@ interface HealthSummary {
     stage: string;
     estimated_value: string | null;
     probability: number | null;
+    created_at: string;
+    expected_close_date: string | null;
   }[];
   drifting_relationship_count: number;
   drifting_relationships: {
@@ -67,6 +70,9 @@ export default function DashboardPage() {
                       <th>Organization</th>
                       <th>Stage</th>
                       <th>Value</th>
+                      <th>Date Added</th>
+                      <th>Expected Close Date</th>
+                      <th>Probability</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -78,6 +84,9 @@ export default function DashboardPage() {
                         <td>{o.organization_name}</td>
                         <td>{o.stage}</td>
                         <td>{o.estimated_value ? `$${Number(o.estimated_value).toLocaleString()}` : "—"}</td>
+                        <td>{formatDate(o.created_at)}</td>
+                        <td>{o.expected_close_date ? formatDate(o.expected_close_date) : "—"}</td>
+                        <td>{o.probability !== null ? `${o.probability}%` : "—"}</td>
                       </tr>
                     ))}
                   </tbody>

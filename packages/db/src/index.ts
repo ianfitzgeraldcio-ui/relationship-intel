@@ -490,7 +490,7 @@ export const reports = {
          FROM opportunities WHERE stage NOT IN ('won', 'lost') GROUP BY stage`
       ),
       pool.query(
-        `SELECT o.id, o.name, o.stage, o.estimated_value, o.probability, org.name AS organization_name
+        `SELECT o.id, o.name, o.stage, o.estimated_value, o.probability, o.created_at, o.expected_close_date, org.name AS organization_name
          FROM opportunities o
          JOIN organizations org ON org.id = o.organization_id
          WHERE o.stage NOT IN ('won', 'lost')
