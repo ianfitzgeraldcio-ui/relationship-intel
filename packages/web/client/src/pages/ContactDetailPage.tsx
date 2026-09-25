@@ -7,6 +7,10 @@ import ContactForm from "../components/ContactForm";
 import type { ContactFormValues } from "../components/ContactForm";
 import ContactSearchInput from "../components/ContactSearchInput";
 import type { ContactOption } from "../components/ContactSearchInput";
+import OrganizationForm from "../components/OrganizationForm";
+import type { OrganizationFormValues } from "../components/OrganizationForm";
+import OrganizationSearchInput from "../components/OrganizationSearchInput";
+import type { OrganizationOption } from "../components/OrganizationSearchInput";
 import { formatDate, todayInPacific } from "../timezone";
 
 const TEMPERATURES = ["cold", "cool", "warm", "hot"];
@@ -366,7 +370,7 @@ export default function ContactDetailPage() {
         <Modal title="Add position history" onClose={() => setActiveModal(null)}>
           <PositionHistoryForm
             contactId={id}
-            defaultOrganizationId={contact.organization_id}
+            defaultOrganization={{ id: contact.organization_id, name: contact.organization_name }}
             onDone={() => {
               setActiveModal(null);
               load();
@@ -460,16 +464,18 @@ export default function ContactDetailPage() {
 
 function PositionHistoryForm({
   contactId,
-  defaultOrganizationId,
+  defaultOrganization,
   onDone,
   onCancel,
 }: {
   contactId: string;
-  defaultOrganizationId: string;
+  defaultOrganization: OrganizationOption;
   onDone: () => void;
   onCancel: () => void;
 }) {
-  const [organizationId, setOrganizationId] = useState(defaultOrganizationId);
+  const [organization, setOrganization] = useState<OrganizationOption | null>(defaultOrganization);
+  // null = create-organization modal closed; a string (possibly empty) = open, prefilled with that name.
+  const [newOrganizationName, setNewOrganizationName] = useState<string | null>(null);
   const [title, setTitle] = useState("");
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -477,9 +483,13 @@ function PositionHistoryForm({
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+    if (!organization) {
+      setError("Choose an organization, or create a new one.");
+      return;
+    }
     try {
       await api.contacts.addPositionHistory(contactId, {
-        organization_id: organizationId,
+        organization_id: organization.id,
         title,
         start_date: startDate || undefined,
         end_date: endDate || undefined,
@@ -490,34 +500,63 @@ function PositionHistoryForm({
     }
   }
 
+  async function handleCreateOrganization(values: OrganizationFormValues) {
+    const created = await api.organizations.create(values);
+    setOrganization({ id: created.id, name: created.name, org_type: created.org_type, state: created.state });
+    setNewOrganizationName(null);
+    setError(null);
+  }
+
+  // The create-organization modal is a sibling of the form (not inside it), so its own
+  // <form> never nests in this one and the position fields below keep their values.
   return (
-    <form className="entity-form" onSubmit={handleSubmit}>
-      <label>
-        Organization ID
-        <input value={organizationId} onChange={(e) => setOrganizationId(e.target.value)} required />
-      </label>
-      <label>
-        Title
-        <input value={title} onChange={(e) => setTitle(e.target.value)} required />
-      </label>
-      <div className="form-row">
+    <>
+      <form className="entity-form" onSubmit={handleSubmit}>
+        <div className="form-field">
+          Organization
+          <OrganizationSearchInput
+            selected={organization}
+            onSelect={(org) => {
+              setOrganization(org);
+              setError(null);
+            }}
+            onClear={() => setOrganization(null)}
+            onCreateNew={setNewOrganizationName}
+          />
+        </div>
         <label>
-          Start date
-          <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          Title
+          <input value={title} onChange={(e) => setTitle(e.target.value)} required />
         </label>
-        <label>
-          End date
-          <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
-        </label>
-      </div>
-      {error && <p className="login-error">{error}</p>}
-      <div className="form-actions">
-        <button type="button" className="secondary-button" onClick={onCancel}>
-          Cancel
-        </button>
-        <button type="submit">Save</button>
-      </div>
-    </form>
+        <div className="form-row">
+          <label>
+            Start date
+            <input type="date" value={startDate} onChange={(e) => setStartDate(e.target.value)} />
+          </label>
+          <label>
+            End date
+            <input type="date" value={endDate} onChange={(e) => setEndDate(e.target.value)} />
+          </label>
+        </div>
+        {error && <p className="login-error">{error}</p>}
+        <div className="form-actions">
+          <button type="button" className="secondary-button" onClick={onCancel}>
+            Cancel
+          </button>
+          <button type="submit">Save</button>
+        </div>
+      </form>
+      {newOrganizationName !== null && (
+        <Modal title="New organization" onClose={() => setNewOrganizationName(null)}>
+          <OrganizationForm
+            initial={{ name: newOrganizationName }}
+            onSubmit={handleCreateOrganization}
+            onCancel={() => setNewOrganizationName(null)}
+            submitLabel="Create and use"
+          />
+        </Modal>
+      )}
+    </>
   );
 }
 

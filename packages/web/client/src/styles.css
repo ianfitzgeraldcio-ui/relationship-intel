@@ -429,6 +429,10 @@ button {
   position: relative;
 }
 
+.contact-search input {
+  width: 100%;
+}
+
 .contact-search-results {
   position: absolute;
   top: calc(100% + 4px);
@@ -464,6 +468,22 @@ button {
 
 .contact-search-empty:hover {
   background: transparent !important;
+}
+
+.entity-form .form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.contact-search-results li.org-search-create {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  border-radius: 0 0 6px 6px;
+  color: var(--accent);
+  font-weight: 500;
 }
 
 .contact-search-selected {
