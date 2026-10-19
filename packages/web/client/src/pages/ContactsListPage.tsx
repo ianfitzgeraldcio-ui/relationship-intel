@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { useLiveRefresh } from "../useLiveRefresh";
 import Modal from "../components/Modal";
 import ContactForm from "../components/ContactForm";
 import type { ContactFormValues } from "../components/ContactForm";
@@ -21,12 +22,13 @@ export default function ContactsListPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  async function load() {
+  async function load(silent = false) {
     try {
       const results = await api.contacts.list({ query });
       setContacts(results);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load");
     }
   }
 
@@ -34,6 +36,8 @@ export default function ContactsListPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
+
+  useLiveRefresh(() => load(true), ["contacts"]);
 
   async function handleCreate(values: ContactFormValues) {
     await api.contacts.create(values);

@@ -163,4 +163,25 @@ CREATE INDEX IF NOT EXISTS signals_date_idx ON signals (signal_date DESC);
 -- Re-posting the same article for the same org is a no-op, so the scheduled
 -- task can safely overlap its lookback windows.
 CREATE UNIQUE INDEX IF NOT EXISTS signals_org_source_url_uniq ON signals (organization_id, source_url) WHERE source_url IS NOT NULL;
+
+-- Tells the web app when data changes, from any writer (MCP tools, the web UI,
+-- scripts), so open pages can refresh themselves. pg_notify is transactional:
+-- listeners hear about a change only after it commits. The payload is the
+-- table name. Statement-level, so a bulk statement sends one notification.
+CREATE OR REPLACE FUNCTION notify_data_change() RETURNS trigger AS $$
+BEGIN
+  PERFORM pg_notify('data_changed', TG_TABLE_NAME);
+  RETURN NULL;
+END;
+$$ LANGUAGE plpgsql;
+CREATE OR REPLACE TRIGGER organizations_notify AFTER INSERT OR UPDATE OR DELETE ON organizations FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER contacts_notify AFTER INSERT OR UPDATE OR DELETE ON contacts FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER contact_position_history_notify AFTER INSERT OR UPDATE OR DELETE ON contact_position_history FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER firm_colleagues_notify AFTER INSERT OR UPDATE OR DELETE ON firm_colleagues FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER relationships_notify AFTER INSERT OR UPDATE OR DELETE ON relationships FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER interactions_notify AFTER INSERT OR UPDATE OR DELETE ON interactions FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER contact_connections_notify AFTER INSERT OR UPDATE OR DELETE ON contact_connections FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER opportunities_notify AFTER INSERT OR UPDATE OR DELETE ON opportunities FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER opportunity_contacts_notify AFTER INSERT OR UPDATE OR DELETE ON opportunity_contacts FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
+CREATE OR REPLACE TRIGGER signals_notify AFTER INSERT OR UPDATE OR DELETE ON signals FOR EACH STATEMENT EXECUTE FUNCTION notify_data_change();
 `;

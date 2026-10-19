@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { api } from "../api";
+import { useLiveRefresh } from "../useLiveRefresh";
 import SignalsTable, { categoryLabel } from "../components/SignalsTable";
 import type { Signal } from "../components/SignalsTable";
 import { todayInPacific } from "../timezone";
@@ -30,7 +31,7 @@ export default function SignalsPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  async function load() {
+  async function load(silent = false) {
     try {
       const results = await api.signals.list({
         query,
@@ -42,7 +43,7 @@ export default function SignalsPage() {
       setSignals(results);
       setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load");
     } finally {
       setLoading(false);
     }
@@ -52,6 +53,8 @@ export default function SignalsPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, category, minScore, days]);
+
+  useLiveRefresh(() => load(true), ["signals", "organizations"]);
 
   return (
     <div>

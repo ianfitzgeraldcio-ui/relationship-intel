@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
+import { useLiveRefresh } from "../useLiveRefresh";
 import Modal from "../components/Modal";
 import OrganizationForm from "../components/OrganizationForm";
 import type { OrganizationFormValues } from "../components/OrganizationForm";
@@ -20,7 +21,7 @@ export default function OrganizationDetailPage() {
   const [showEdit, setShowEdit] = useState(false);
   const [showNewOpportunity, setShowNewOpportunity] = useState(false);
 
-  async function load() {
+  async function load(silent = false) {
     if (!id) return;
     try {
       const [orgData, contactsData, relationshipsData, signalsData] = await Promise.all([
@@ -34,7 +35,7 @@ export default function OrganizationDetailPage() {
       setRelationships(relationshipsData);
       setSignals(signalsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load");
     }
   }
 
@@ -42,6 +43,8 @@ export default function OrganizationDetailPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useLiveRefresh(() => load(true));
 
   async function handleUpdate(values: OrganizationFormValues) {
     if (!id) return;

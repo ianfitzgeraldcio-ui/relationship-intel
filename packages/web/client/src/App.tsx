@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { api } from "./api";
+import { onAuthLost } from "./liveUpdates";
 import LoginPage from "./pages/LoginPage";
 import Layout from "./components/Layout";
 import DashboardPage from "./pages/DashboardPage";
@@ -20,6 +21,8 @@ export default function App() {
       .then((s) => setAuthenticated(s.authenticated))
       .catch(() => setAuthenticated(false));
   }, []);
+
+  useEffect(() => onAuthLost(() => setAuthenticated(false)), []);
 
   if (authenticated === null) {
     return <div className="loading-screen">Loading…</div>;

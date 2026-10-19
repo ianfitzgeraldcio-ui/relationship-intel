@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { api } from "../api";
+import { useLiveRefresh } from "../useLiveRefresh";
 import Modal from "../components/Modal";
 import OpportunityForm from "../components/OpportunityForm";
 import type { OpportunityFormValues } from "../components/OpportunityForm";
@@ -37,19 +38,23 @@ export default function OpportunitiesBoardPage() {
   const [dragOverStage, setDragOverStage] = useState<string | null>(null);
   const [searchParams, setSearchParams] = useSearchParams();
 
-  async function load() {
+  async function load(silent = false) {
     try {
       const [oppData, forecastData] = await Promise.all([api.opportunities.list({}), api.opportunities.revenueForecast()]);
       setOpportunities(oppData);
       setForecast(forecastData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load");
     }
   }
 
   useEffect(() => {
     load();
   }, []);
+
+  useLiveRefresh(() => {
+    if (draggedId === null) void load(true);
+  }, ["opportunities", "organizations"]);
 
   // Deep link from the dashboard (?open=<opportunity id>) opens straight
   // into the edit modal instead of leaving the visitor to find the card.

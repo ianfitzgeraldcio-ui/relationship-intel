@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { useLiveRefresh } from "../useLiveRefresh";
 import { formatDate } from "../timezone";
 
 interface HealthSummary {
@@ -32,12 +33,21 @@ export default function DashboardPage() {
   const [summary, setSummary] = useState<HealthSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
+  async function load(silent = false) {
+    try {
+      setSummary(await api.healthSummary());
+      setError(null);
+    } catch (err) {
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load");
+    }
+  }
+
   useEffect(() => {
-    api
-      .healthSummary()
-      .then(setSummary)
-      .catch((err) => setError(err instanceof Error ? err.message : "Failed to load"));
+    load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useLiveRefresh(() => load(true), ["organizations", "contacts", "relationships", "interactions", "opportunities"]);
 
   return (
     <div className="dashboard">

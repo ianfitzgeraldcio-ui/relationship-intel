@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { api } from "../api";
+import { useLiveRefresh } from "../useLiveRefresh";
 import Modal from "../components/Modal";
 import OrganizationForm from "../components/OrganizationForm";
 import type { OrganizationFormValues } from "../components/OrganizationForm";
@@ -20,12 +21,13 @@ export default function OrganizationsListPage() {
   const [error, setError] = useState<string | null>(null);
   const [showCreate, setShowCreate] = useState(false);
 
-  async function load() {
+  async function load(silent = false) {
     try {
       const results = await api.organizations.list({ query });
       setOrgs(results);
+      setError(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load");
     }
   }
 
@@ -33,6 +35,8 @@ export default function OrganizationsListPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query]);
+
+  useLiveRefresh(() => load(true), ["organizations"]);
 
   async function handleCreate(values: OrganizationFormValues) {
     await api.organizations.create(values);

@@ -3,12 +3,69 @@ import { randomUUID } from "node:crypto";
 import { SCHEMA_SQL } from "./schema.js";
 import { calculateEffectiveStrength } from "../../core/src/index.js";
 
-const { Pool } = pg;
+const { Pool, Client } = pg;
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 export async function runMigrations(): Promise<void> {
   await pool.query(SCHEMA_SQL);
+}
+
+// Calls onChange(table) after any committed change to a table with a
+// notify trigger (see schema.ts), and onChange(null) every time the listener
+// (re)connects - changes made while it was disconnected were missed, so the
+// receiver should treat null as "anything may have changed". Reconnects with
+// backoff; returns a function that stops listening.
+export function listenForChanges(onChange: (table: string | null) => void): () => void {
+  let stopped = false;
+  let current: pg.Client | null = null;
+  let delay = 1000;
+
+  async function connect() {
+    if (stopped) return;
+    const client = new Client({ connectionString: process.env.DATABASE_URL, keepAlive: true });
+    current = client;
+    let finished = false;
+    const retry = () => {
+      if (finished) return;
+      finished = true;
+      client.removeAllListeners();
+      client.on("error", () => {});
+      try {
+        client.end().catch(() => {});
+      } catch {
+        // never connected - nothing to close
+      }
+      if (stopped) return;
+      setTimeout(connect, delay);
+      delay = Math.min(delay * 2, 30_000);
+    };
+    client.on("error", (err) => {
+      console.error("Change listener error:", err.message);
+      retry();
+    });
+    client.on("end", retry);
+    client.on("notification", (msg) => onChange(msg.payload ?? null));
+    try {
+      await client.connect();
+      await client.query("LISTEN data_changed");
+      delay = 1000;
+      onChange(null);
+    } catch (err) {
+      console.error("Change listener could not connect:", err instanceof Error ? err.message : err);
+      retry();
+    }
+  }
+
+  void connect();
+  return () => {
+    stopped = true;
+    try {
+      current?.end().catch(() => {});
+    } catch {
+      // already closed
+    }
+  };
 }
 
 function genId(prefix: string): string {

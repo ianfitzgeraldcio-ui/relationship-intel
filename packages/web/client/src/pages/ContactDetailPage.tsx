@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { api } from "../api";
+import { useLiveRefresh } from "../useLiveRefresh";
 import Modal from "../components/Modal";
 import ContactForm from "../components/ContactForm";
 import type { ContactFormValues } from "../components/ContactForm";
@@ -31,7 +32,7 @@ export default function ContactDetailPage() {
   >(null);
   const [selectedInteraction, setSelectedInteraction] = useState<any>(null);
 
-  async function load() {
+  async function load(silent = false) {
     if (!id) return;
     try {
       const [profileData, connectionsData, colleaguesData] = await Promise.all([
@@ -43,7 +44,7 @@ export default function ContactDetailPage() {
       setConnections(connectionsData);
       setFirmColleagues(colleaguesData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to load");
+      if (!silent) setError(err instanceof Error ? err.message : "Failed to load");
     }
   }
 
@@ -51,6 +52,8 @@ export default function ContactDetailPage() {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
+
+  useLiveRefresh(() => load(true));
 
   async function handleUpdate(values: ContactFormValues) {
     if (!id) return;

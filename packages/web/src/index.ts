@@ -10,6 +10,7 @@ import { interactionsRouter } from "./routes/interactions.js";
 import { opportunitiesRouter } from "./routes/opportunities.js";
 import { reportsRouter } from "./routes/reports.js";
 import { signalsRouter } from "./routes/signals.js";
+import { eventsHandler, startChangeFeed } from "./events.js";
 
 async function main() {
   console.log("Relationship Intelligence Web UX v0.1.0");
@@ -21,6 +22,8 @@ async function main() {
     console.error("Failed to run database migrations:", err);
     process.exit(1);
   }
+
+  startChangeFeed();
 
   const app = express();
   app.set("trust proxy", 1);
@@ -42,6 +45,7 @@ async function main() {
 
   const apiRouter = express.Router();
   apiRouter.use(requireAuth);
+  apiRouter.get("/events", eventsHandler);
   apiRouter.use(organizationsRouter);
   apiRouter.use(contactsRouter);
   apiRouter.use(contactConnectionsRouter);
